@@ -53,12 +53,13 @@ async fn main() -> Result<()> {
             .with_legacy_session_mode(false)
             .with_json_response(true),
     );
-    let protected = Router::new()
-        .nest_service("/mcp", service)
-        .layer(middleware::from_fn_with_state(
-            Arc::clone(&auth),
-            auth::require_auth,
-        ));
+    let protected =
+        Router::new()
+            .nest_service("/mcp", service)
+            .layer(middleware::from_fn_with_state(
+                Arc::clone(&auth),
+                auth::require_auth,
+            ));
     let router = Router::new()
         .merge(protected)
         // Anonymous access is allowed ONLY to static OAuth metadata.
