@@ -22,9 +22,9 @@ pub(crate) async fn require_auth(
         }
         Err(AuthError::Unauthorised) => {
             let mut response = StatusCode::UNAUTHORIZED.into_response();
-            response.headers_mut().insert(
-                WWW_AUTHENTICATE, auth.discovery.challenge.clone(),
-            );
+            response
+                .headers_mut()
+                .insert(WWW_AUTHENTICATE, auth.discovery.challenge.clone());
             response
         }
         Err(AuthError::KeycloakUnavailable) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
