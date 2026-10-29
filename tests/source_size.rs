@@ -16,7 +16,7 @@ fn collect(path: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
             let extension = path.extension().and_then(|v| v.to_str()).unwrap_or("");
             if matches!(
                 extension,
-                "rs" | "py" | "sh" | "yml" | "yaml" | "json" | "toml"
+                "rs" | "py" | "sh" | "yml" | "yaml" | "json" | "toml" | "service" | "example"
             ) || path.file_name().is_some_and(|v| v == "Dockerfile")
             {
                 files.push(path);
@@ -30,7 +30,7 @@ fn collect(path: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
 fn handwritten_files_do_not_exceed_one_hundred_lines() -> Result<()> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut files = vec![root.join("Cargo.toml")];
-    for directory in ["src", "scripts", "tests", ".github", "config"] {
+    for directory in ["src", "scripts", "tests", ".github", "config", "deploy"] {
         collect(&root.join(directory), &mut files)?;
     }
     for path in &files {
