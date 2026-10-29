@@ -1,205 +1,47 @@
-//! Read-only host inventory for the first MCP feature.
-//! No SSH connection details or credentials are accepted in this schema yet.
+//! Load an explicit host inventory. Unknown fields fail instead of being ignored.
+#[cfg(test)]
+mod tests;
+mod validation;
 
-use std::{collections::HashSet, fs, path::Path};
-
-use anyhow::{Context, Result, bail, ensure};
-use serde::{Deserialize, Serialize};
+use anyhow::{Context, Result, ensure};
+use serde::Deserialize;
+use std::{fs::File, io::Read, path::Path};
 
 const MAX_CONFIG_BYTES: usize = 64 * 1024;
-const MAX_HOSTS: usize = 64;
-const MAX_ID_BYTES: usize = 64;
-const MAX_DESCRIPTION_CHARS: usize = 256;
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Host {
-    pub id: String,
-    pub description: String,
-    /// Keycloak OIDC subject IDs (sub). Empty means no user may see this host.
-    pub allowed_subjects: Vec<String>,
+pub(crate) struct Host {
+    pub(crate) id: String,
+    pub(crate) description: String,
+    /// Exact Keycloak subjects allowed here. An empty list means nobody.
+    pub(crate) allowed_subjects: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Config {
-    pub hosts: Vec<Host>,
+pub(crate) struct Config {
+    pub(crate) hosts: Vec<Host>,
+}
+
+/// Read at most limit + 1 bytes, so an oversized file cannot exhaust memory.
+pub(crate) fn read_bounded(path: &Path, limit: usize) -> Result<Vec<u8>> {
+    let file = File::open(path).context("cannot open configuration file")?;
+    ensure!(
+        file.metadata()?.is_file(),
+        "configuration must be a regular file"
+    );
+    let mut bytes = Vec::new();
+    file.take((limit + 1) as u64).read_to_end(&mut bytes)?;
+    ensure!(bytes.len() <= limit, "configuration exceeds {limit} bytes");
+    Ok(bytes)
 }
 
 impl Config {
-    pub fn load(path: &Path) -> Result<Self> {
-        let bytes =
-            fs::read(path).with_context(|| format!("cannot read config: {}", path.display()))?;
-        ensure!(
-            bytes.len() <= MAX_CONFIG_BYTES,
-            "config exceeds {} bytes",
-            MAX_CONFIG_BYTES
-        );
+    pub(crate) fn load(path: &Path) -> Result<Self> {
+        let bytes = read_bounded(path, MAX_CONFIG_BYTES)?;
         let config: Self =
             serde_json::from_slice(&bytes).context("invalid host configuration JSON")?;
         config.validate()
-    }
-
-    pub fn validate(mut self) -> Result<Self> {
-        ensure!(
-            self.hosts.len() <= MAX_HOSTS,
-            "too many host profiles (max {MAX_HOSTS})"
-        );
-        let mut seen = HashSet::new();
-        for host in &self.hosts {
-            ensure!(
-                host.allowed_subjects.len() <= 64,
-                "too many allowed subjects"
-            );
-            let mut subjects = HashSet::new();
-            for subject in &host.allowed_subjects {
-                ensure!(
-                    !subject.trim().is_empty()
-                        && subject == subject.trim()
-                        && subject.len() <= 256
-                        && !subject.chars().any(char::is_control),
-                    "invalid allowed subject"
-                );
-                ensure!(subjects.insert(subject), "duplicate allowed subject");
-            }
-            let id = host.id.as_bytes();
-            let valid = !id.is_empty()
-                && id.len() <= MAX_ID_BYTES
-                && id[0].is_ascii_lowercase()
-                && id[1..].iter().all(|c| {
-                    c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-' || *c == b'_'
-                });
-            if !valid {
-                bail!(
-                    "invalid host id: use lowercase a-z first, then a-z, 0-9, - or _, max {MAX_ID_BYTES} bytes"
-                );
-            }
-            ensure!(
-                seen.insert(host.id.as_str()),
-                "duplicate host id: {}",
-                host.id
-            );
-            let desc = host.description.as_str();
-            ensure!(
-                !desc.trim().is_empty()
-                    && desc == desc.trim()
-                    && desc.chars().count() <= MAX_DESCRIPTION_CHARS
-                    && !desc.chars().any(char::is_control),
-                "invalid description for host {}",
-                host.id
-            );
-        }
-        self.hosts.sort_by(|a, b| a.id.cmp(&b.id));
-        Ok(self)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn config(value: &str) -> Result<Config> {
-        let c: Config = serde_json::from_str(value)?;
-        c.validate()
-    }
-
-    #[test]
-    fn accepts_and_sorts_explicit_host_ids() {
-        let c = config(r#"{"hosts":[{"id":"z_lab","description":"Secondary","allowed_subjects":[]},{"id":"a-lab","description":"Primary","allowed_subjects":[]}]}"#).unwrap();
-        assert_eq!(
-            c.hosts.iter().map(|h| h.id.as_str()).collect::<Vec<_>>(),
-            vec!["a-lab", "z_lab"]
-        );
-    }
-
-    #[test]
-    fn empty_inventory_is_safe() {
-        assert!(config(r#"{"hosts":[]}"#).unwrap().hosts.is_empty());
-    }
-
-    #[test]
-    fn rejects_duplicate_host_ids() {
-        assert!(
-            config(
-                r#"{"hosts":[{"id":"lab","description":"One","allowed_subjects":[]},{"id":"lab","description":"Two","allowed_subjects":[]}]}"#
-            )
-            .is_err()
-        );
-    }
-
-    #[test]
-    fn rejects_host_option_injection_and_unknown_fields() {
-        for id in [
-            "-oProxyCommand",
-            "evil.host",
-            "../root",
-            "bad host",
-            "",
-            "UPPER",
-            "a/b",
-        ] {
-            let s =
-                serde_json::json!({"hosts":[{"id":id,"description":"Test","allowed_subjects":[]}]})
-                    .to_string();
-            assert!(config(&s).is_err(), "accepted invalid id: {id}");
-        }
-        assert!(
-            config(r#"{"hosts":[{"id":"test","description":"Test","allowed_subjects":[],"private_key":"/tmp/id"}]}"#)
-                .is_err()
-        );
-        assert!(config(r#"{"hosts":[],"ssh_password":"oops"}"#).is_err());
-    }
-
-    #[test]
-    fn rejects_unbounded_or_control_character_descriptions() {
-        let long = "x".repeat(257);
-        for description in [long.as_str(), "\n", "bad\rtext", " spaces "] {
-            let s =
-                serde_json::json!({"hosts":[{"id":"test","description":description}]}).to_string();
-            assert!(config(&s).is_err());
-        }
-    }
-
-    #[test]
-    fn rejects_more_than_64_hosts() {
-        let hosts = (0..65)
-            .map(|n| Host {
-                id: format!("h{n}"),
-                description: "Test".into(),
-                allowed_subjects: vec![],
-            })
-            .collect();
-        assert!(Config { hosts }.validate().is_err());
-    }
-
-    #[test]
-    fn refuses_unrecognised_or_duplicate_grants() {
-        assert!(
-            config(
-                r#"{"hosts":[{"id":"lab","description":"Lab","allowed_subjects":["same","same"]}]}"#
-            )
-            .is_err()
-        );
-        assert!(
-            config(r#"{"hosts":[{"id":"lab","description":"Lab","allowed_subjects":[""]}]}"#)
-                .is_err()
-        );
-        assert!(config(r#"{"hosts":[{"id":"lab","description":"Lab"}]}"#).is_err());
-    }
-
-    #[test]
-    fn refuses_missing_file_and_invalid_json() {
-        let path = std::path::Path::new("/this-path-must-not-exist/postern.json");
-        assert!(Config::load(path).is_err());
-        let temp = tempfile::NamedTempFile::new().unwrap();
-        fs::write(temp.path(), "{broken").unwrap();
-        assert!(Config::load(temp.path()).is_err());
-    }
-
-    #[test]
-    fn refuses_large_file() {
-        let temp = tempfile::NamedTempFile::new().unwrap();
-        fs::write(temp.path(), " ".repeat(MAX_CONFIG_BYTES + 1)).unwrap();
-        assert!(Config::load(temp.path()).is_err());
     }
 }

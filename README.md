@@ -56,9 +56,12 @@ The first feature, a read-only `hosts()` tool and loopback-only Rust Streamable 
 - [Architecture and lifecycle](docs/architecture.md)
 - [MCP tool contract](docs/mcp-api.md)
 - [Security model and threat analysis](docs/security.md)
+- [Implemented security controls](docs/hardening.md)
+- [Engineering rules and 100-line source limit](CONTRIBUTING.md)
 - [Audit model](docs/auditing.md)
 - [Deployment and configuration design](docs/operations.md)
 - [Implementation and verification plan](docs/roadmap.md)
+- [Current branch scope and Docker verification](docs/branch-scope.md)
 - [ADR 0001: session-authorised, unrestricted execution](docs/adr/0001-session-authorised-execution.md)
 
 ## Project boundaries

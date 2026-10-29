@@ -1,0 +1,59 @@
+//! Discovery requires current credentials and exposes only the implemented hosts tool.
+use crate::support::client::Mcp;
+use anyhow::{Result, ensure};
+use reqwest::Method;
+use serde_json::json;
+
+pub async fn run(mcp: &Mcp, alice: &str, bob: &str) -> Result<()> {
+    for verb in [Method::POST, Method::GET, Method::DELETE] {
+        mcp.request(None, verb.clone(), "tools/list", json!({}), 401, &[])
+            .await?;
+        mcp.request(
+            Some("invalid-token"),
+            verb,
+            "tools/list",
+            json!({}),
+            401,
+            &[],
+        )
+        .await?;
+    }
+    let duplicate = format!("Bearer {bob}");
+    mcp.request(
+        Some(alice),
+        Method::POST,
+        "tools/list",
+        json!({}),
+        401,
+        &[("authorization", &duplicate)],
+    )
+    .await?;
+    let init = mcp
+        .call(
+            alice,
+            "initialize",
+            json!({"protocolVersion":"2025-11-25", "capabilities":{},
+        "clientInfo":{"name":"rust-docker-integration", "version":"1"}}),
+            200,
+        )
+        .await?;
+    ensure!(init["result"]["capabilities"].get("tools").is_some());
+    let list = mcp.call(bob, "tools/list", json!({}), 200).await?;
+    ensure!(
+        list["result"]["tools"]
+            .as_array()
+            .is_some_and(|v| v.len() == 1 && v[0]["name"] == "hosts")
+    );
+    for name in ["exec", "open_session", "close_session", "audit"] {
+        let result = mcp
+            .call(
+                alice,
+                "tools/call",
+                json!({"name":name, "arguments":{}}),
+                200,
+            )
+            .await?;
+        ensure!(result.get("error").is_some() || result["result"]["isError"] == true);
+    }
+    Ok(())
+}

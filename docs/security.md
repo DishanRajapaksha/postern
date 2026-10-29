@@ -2,6 +2,8 @@
 
 Status: **proposed security requirements**. Do not deploy as trusted infrastructure before implementation, adversarial testing and review.
 
+The current read-only preview implements a subset; see [implemented controls and remaining deployment requirements](hardening.md) for exact limits, tests and exclusions.
+
 ## Security position
 
 Postern is a remote code execution gateway by design. The user explicitly wants **no server-side command restrictions after session authorisation**. Security therefore rests on authenticating the caller, limiting which SSH accounts/hosts it can reach, isolating credentials, constraining session lifetime, observing usage and reducing blast radius at the operating-system/network layer.

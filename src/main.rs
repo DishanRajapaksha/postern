@@ -4,6 +4,7 @@
 
 mod auth;
 mod config;
+mod http;
 mod mcp;
 
 use std::{
@@ -55,6 +56,11 @@ async fn main() -> Result<()> {
         .layer(middleware::from_fn_with_state(
             Arc::clone(&auth),
             auth::require_auth,
+        ))
+        // Last-added middleware runs first, before token introspection or MCP parsing.
+        .layer(middleware::from_fn_with_state(
+            Arc::new(http::Limits::default()),
+            http::protect,
         ));
     let listener = tokio::net::TcpListener::bind(listen).await?;
     eprintln!(
