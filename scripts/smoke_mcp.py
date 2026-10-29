@@ -147,6 +147,7 @@ def main():
             assert json.load(response)["active"] is False
         p = subprocess.Popen(["target/debug/postern"], env=env,
                              stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        failed = False
         try:
             ready(p)
             send(new_request("initialize", 1), 401)
@@ -177,15 +178,18 @@ def main():
             assert FakeKeycloak.calls >= 13, f"Expected Keycloak introspection for every call, got {FakeKeycloak.calls}"
             print("PASS: HTTPS token introspection, deny-by-default, cross-user isolation, MCP hosts")
         except BaseException:
+            failed = True
             print(f"Fake Keycloak served {FakeKeycloak.calls} introspection requests", file=sys.stderr)
             raise
         finally:
             p.terminate()
             try:
-                p.communicate(timeout=5)
+                _, stderr = p.communicate(timeout=5)
             except subprocess.TimeoutExpired:
                 p.kill()
-                p.communicate()
+                _, stderr = p.communicate()
+            if failed:
+                print("Postern debug output:", stderr.decode(errors="replace"), file=sys.stderr)
             server.shutdown()
             server.server_close()
 
