@@ -1,6 +1,6 @@
 # Implementation and verification plan
 
-Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 21 unit tests, mock MCP HTTP tests and Docker integration against disposable Keycloak passing locally on 2026-10-29. See [branch scope validation](branch-scope.md) and [security hardening](hardening.md). No authenticated public endpoint, OAuth discovery, SSH execution, sessions or auditing yet.
+Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 21 unit tests, mock MCP HTTP tests and Docker integration against disposable Keycloak passing locally on 2026-10-29. See [branch scope validation](branch-scope.md) and [security hardening](hardening.md). No authenticated public endpoint, verified ChatGPT sign-in, SSH execution, sessions or auditing yet.
 
 ## First implementation slice: read-only local MCP inventory (2026-10-29)
 
@@ -11,7 +11,8 @@ Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory dev
 - [x] Commit dependency lockfile, enforce locked builds and declare/test Rust 1.93 as the minimum toolchain.
 - [x] Keycloak introspection gate on every HTTP request, stateless MCP, subject-scoped host visibility and deny-by-default policy (verified against disposable real Keycloak; live user integration remains outstanding).
 - [x] Docker integration with real Keycloak over verified HTTPS, including concurrent subject isolation, expiry, logout revocation and fail-closed authentication errors; CI job added.
-- [ ] Implement OAuth discovery/authorisation flow for the actual ChatGPT connector, verify real Keycloak credentials and live integration before public exposure or SSH execution.
+- [x] Implement RFC 9728 OAuth protected-resource metadata and 401 discovery challenges (PR #2, still in review).
+- [ ] Configure/verify real ChatGPT OAuth client registration and login through Keycloak, including PKCE S256, resource/audience binding and final public HTTPS integration, before SSH execution.
 
 This slice does **not** satisfy the Phase 0 ChatGPT integration gate or the Phase 1 SSH execution milestone.
 
