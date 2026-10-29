@@ -8,6 +8,8 @@ Create a dedicated system account named `postern`, without a login shell, home d
 
 The shipped inventory is empty and denies all visibility. Populate actual grants only from independently verified Keycloak subjects. Configure a dedicated confidential introspection client, audience and `postern:use` scope. Preserve the existing realm's passkey flow and disabled password grants. Do not reuse Leyline's client secret or alter shared routing to test this preview.
 
+For the existing Keycloak 26.8.1 issuer, diagnostic and future user-token clients must include both `postern` and `postern-resource` audiences. The dedicated managed clients disable Full Scope Allowed. Keep audience validation enabled and preserve existing realm/client policies.
+
 ## Acceptance checks
 
 1. Build the exact accepted Git commit for Gont's architecture; compare SHA-256 hashes before and after transfer.

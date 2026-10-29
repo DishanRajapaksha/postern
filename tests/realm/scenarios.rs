@@ -19,6 +19,10 @@ pub async fn run(issuer: &Issuer) -> Result<()> {
     ensure!(claims["active"] == true && claims["sub"] == ALICE && claims["token_type"] == "Bearer");
     let mut server = Postern::start(&environment::configured()).await?;
     let mcp = Mcp::new()?;
+    // Real deployments issue tokens through a different client from the introspector.
+    let independent = issuer.token("alice", "postern-caller", true).await?;
+    mcp.hosts(&independent.access_token, isolation::inventory("alice"))
+        .await?;
     boundary::run(&mcp, &bob.access_token).await?;
     discovery::run(&mcp, &alice.access_token, &bob.access_token).await?;
     isolation::run(

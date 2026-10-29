@@ -1,4 +1,5 @@
 # Template only. Store the populated file on Gont as root:root, mode 0600.
+# Issued tokens need audiences postern AND postern-resource on Keycloak 26.6.2+.
 POSTERN_CONFIG=/srv/services/postern/config/hosts.json
 POSTERN_KEYCLOAK_ISSUER=https://heimdall.talesfrom.earth/keycloak/realms/gont
 POSTERN_KEYCLOAK_AUDIENCE=postern

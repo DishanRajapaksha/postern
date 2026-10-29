@@ -14,6 +14,8 @@ Configure a trusted Keycloak realm and an appropriate **confidential introspecti
 - `scope`: includes `postern:use` as a separate word.
 - `exp`: valid future expiry. Optional `nbf`/`iat` cannot be in the future.
 
+On Keycloak 26.6.2 and newer, tokens must also include the **introspection client's ID** in their audience. For example, with required audience `postern` and introspection client `postern-resource`, configure the issuing client's audience mapper to include both values in access tokens and introspection. Keep Keycloak's audience validation enabled. See the [Keycloak migration guidance](https://www.keycloak.org/docs/26.8.1/upgrading/#migrating-to-26-6-2).
+
 Postern only accepts tokens when Keycloak introspection returns `active: true`. It rejects missing claims, wrong audiences, issuers or scopes, expired/revoked tokens, and all malformed introspection responses. **No token introspection cache or fallback is permitted.** If Keycloak is unavailable, requests fail closed with HTTP 503. Missing/invalid credentials receive HTTP 401. Token revocation therefore takes effect on the next request, subject to Keycloak's reported active state and availability.
 
 Environment variables:
@@ -82,7 +84,7 @@ With Docker Engine/Desktop running and Docker Compose available:
 sh scripts/test_docker.sh
 ```
 
-No local Rust or OpenSSL installation is required. The runner builds the branch with Rust 1.93 and runs formatting, Clippy, unit tests and native Rust integration tests, then exercises a disposable **Keycloak 26.4.7** realm over verified HTTPS. First use downloads the images and Rust dependencies. There is no Python harness or Python runtime requirement.
+No local Rust or OpenSSL installation is required. The runner builds the branch with Rust 1.93 and runs formatting, Clippy, unit tests and native Rust integration tests, then exercises a disposable **Keycloak 26.8.1** realm over verified HTTPS. First use downloads the images and Rust dependencies. There is no Python harness or Python runtime requirement.
 
 All handwritten code/configuration files stay within 100 lines; generated Cargo.lock and Markdown documentation are excluded. HTTP clients must use an allowed local Host and, when sending Origin, the matching local origin. Requests are limited to 16 KiB and 15 seconds, with 32 admitted requests at a time. See [hardening](hardening.md) for exact behavior and limits.
 
@@ -93,6 +95,8 @@ Compose publishes **no host ports**. The runner shares Keycloak's disposable net
 The setup uses Keycloak's documented [realm import](https://www.keycloak.org/server/containers#_importing_a_realm_on_startup) and [PEM TLS configuration](https://www.keycloak.org/server/enabletls). It validates this development slice against a local real issuer; the public OAuth/ChatGPT acceptance gate below remains outstanding.
 
 Compose runs `cargo test --locked --test fixtures -- --ignored` in its init container to generate disposable realm/certificate files. The test runner then runs `cargo test --locked --all-targets` followed by `cargo test --locked --test keycloak -- --ignored`. Keep fixture generation inside Docker; it writes to the mounted `/fixtures` and `/realms` volumes.
+
+The fixture includes a separate token-issuing client and verifies its token through the configured introspection client. The Compose runner does not restart dependencies during test execution, preventing certificate regeneration under a running issuer on older Compose versions.
 
 **Before external deployment:** test against an actual configured Keycloak realm and the user's actual ChatGPT MCP integration, including the OAuth discovery/authorisation flow; implement TLS/public endpoint hardening and bind any future SSH sessions to verified principals. Unit and mock tests alone do not establish production security.
 

@@ -16,7 +16,8 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 compose build
 compose up -d keycloak
-compose run --rm integration sh -ec '
+# Dependencies already ran; never regenerate TLS fixtures under the running issuer.
+compose run --rm --no-deps integration sh -ec '
     cargo fmt --all -- --check
     cargo clippy --locked --all-targets -- -D warnings
     cargo test --locked --all-targets
