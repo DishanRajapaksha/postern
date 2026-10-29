@@ -1,6 +1,17 @@
 # Implementation and verification plan
 
-Status: plan, not completed work. No code, binary, CI workflow or running MCP endpoint exists yet.
+Status: project roadmap. First read-only MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 10 unit tests and local MCP HTTP smoke test passing on 2026-10-29. No authenticated public endpoint, SSH execution, sessions or auditing yet.
+
+## First implementation slice: read-only local MCP inventory (2026-10-29)
+
+- [x] Rust Streamable HTTP MCP server with `hosts()` and explicit JSON host IDs/descriptions.
+- [x] Loopback-only development endpoint with no SSH operations.
+- [x] Strict inventory validation and unit tests (10 passed).
+- [x] GitHub Actions formatting, Clippy, unit tests and MCP HTTP smoke test.
+- [ ] Commit dependency lockfile, and establish precise minimum Rust version.
+- [ ] Authenticate requests before any network exposure or SSH execution.
+
+This slice does **not** satisfy the Phase 0 ChatGPT integration gate or the Phase 1 SSH execution milestone.
 
 ## Phase 0: validate feasibility and freeze contract
 
