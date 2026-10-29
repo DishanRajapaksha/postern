@@ -16,6 +16,8 @@ const MAX_DESCRIPTION_CHARS: usize = 256;
 pub struct Host {
     pub id: String,
     pub description: String,
+    /// Keycloak OIDC subject IDs (sub). Empty means no user may see this host.
+    pub allowed_subjects: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,6 +47,12 @@ impl Config {
         );
         let mut seen = HashSet::new();
         for host in &self.hosts {
+            ensure!(host.allowed_subjects.len() <= 64, "too many allowed subjects");
+            let mut subjects = HashSet::new();
+            for subject in &host.allowed_subjects {
+                ensure!(!subject.trim().is_empty() && subject == subject.trim() && subject.len() <= 256 && !subject.chars().any(char::is_control), "invalid allowed subject");
+                ensure!(subjects.insert(subject), "duplicate allowed subject");
+            }
             let id = host.id.as_bytes();
             let valid = !id.is_empty()
                 && id.len() <= MAX_ID_BYTES
@@ -88,7 +96,7 @@ mod tests {
 
     #[test]
     fn accepts_and_sorts_explicit_host_ids() {
-        let c = config(r#"{"hosts":[{"id":"z_lab","description":"Secondary"},{"id":"a-lab","description":"Primary"}]}"#).unwrap();
+        let c = config(r#"{"hosts":[{"id":"z_lab","description":"Secondary","allowed_subjects":[]},{"id":"a-lab","description":"Primary","allowed_subjects":[]}]}"#).unwrap();
         assert_eq!(
             c.hosts.iter().map(|h| h.id.as_str()).collect::<Vec<_>>(),
             vec!["a-lab", "z_lab"]
@@ -104,7 +112,7 @@ mod tests {
     fn rejects_duplicate_host_ids() {
         assert!(
             config(
-                r#"{"hosts":[{"id":"lab","description":"One"},{"id":"lab","description":"Two"}]}"#
+                r#"{"hosts":[{"id":"lab","description":"One","allowed_subjects":[]},{"id":"lab","description":"Two","allowed_subjects":[]}]}"#
             )
             .is_err()
         );
@@ -121,11 +129,11 @@ mod tests {
             "UPPER",
             "a/b",
         ] {
-            let s = serde_json::json!({"hosts":[{"id":id,"description":"Test"}]}).to_string();
+            let s = serde_json::json!({"hosts":[{"id":id,"description":"Test","allowed_subjects":[]}]}).to_string();
             assert!(config(&s).is_err(), "accepted invalid id: {id}");
         }
         assert!(
-            config(r#"{"hosts":[{"id":"test","description":"Test","private_key":"/tmp/id"}]}"#)
+            config(r#"{"hosts":[{"id":"test","description":"Test","allowed_subjects":[],"private_key":"/tmp/id"}]}"#)
                 .is_err()
         );
         assert!(config(r#"{"hosts":[],"ssh_password":"oops"}"#).is_err());
@@ -147,9 +155,17 @@ mod tests {
             .map(|n| Host {
                 id: format!("h{n}"),
                 description: "Test".into(),
+                allowed_subjects: vec![],
             })
             .collect();
         assert!(Config { hosts }.validate().is_err());
+    }
+
+    #[test]
+    fn refuses_unrecognised_or_duplicate_grants() {
+        assert!(config(r#"{"hosts":[{"id":"lab","description":"Lab","allowed_subjects":["same","same"]}]}"#).is_err());
+        assert!(config(r#"{"hosts":[{"id":"lab","description":"Lab","allowed_subjects":[""]}]}"#).is_err());
+        assert!(config(r#"{"hosts":[{"id":"lab","description":"Lab"}]}"#).is_err());
     }
 
     #[test]
