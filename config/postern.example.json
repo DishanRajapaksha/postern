@@ -1,0 +1,8 @@
+{
+  "hosts": [
+    {
+      "id": "lab",
+      "description": "Disposable local test machine (illustrative only)"
+    }
+  ]
+}
