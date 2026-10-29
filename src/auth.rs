@@ -9,10 +9,10 @@ mod settings;
 mod tests;
 mod transport;
 
+use crate::oauth::Discovery;
 use axum::http::HeaderMap;
 pub(crate) use middleware::require_auth;
 use reqwest::Client;
-use crate::oauth::Discovery;
 use settings::Settings;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
@@ -42,7 +42,8 @@ impl Authenticator {
         let settings = Settings::from_environment()?;
         let client = transport::client()?;
         let discovery = Arc::new(Discovery::from_environment(
-            &settings.issuer, &settings.required_scope,
+            &settings.issuer,
+            &settings.required_scope,
         )?);
         Ok(Self {
             client,
