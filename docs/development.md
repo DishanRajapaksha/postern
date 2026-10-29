@@ -39,7 +39,7 @@ cargo clippy --all-targets -- -D warnings
 cargo test --all-targets
 ```
 
-GitHub Actions runs those checks on the feature branch. The first real ChatGPT round-trip still requires a separately deployed, **authenticated** MCP endpoint and must not be claimed from this preview.
+GitHub Actions runs those checks on the feature branch, plus a real loopback HTTP protocol smoke test. After `cargo build`, run `python3 scripts/smoke_mcp.py` to check `initialize`, `tools/list` and `hosts()` against a locally launched Postern process. The check is intentionally local and makes no SSH connection. The first real ChatGPT round-trip still requires a separately deployed, **authenticated** MCP endpoint and must not be claimed from this preview.
 
 ## Next feature
 
