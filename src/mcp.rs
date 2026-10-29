@@ -23,7 +23,13 @@ pub struct Postern {
 
 #[derive(Serialize)]
 struct HostsResponse<'a> {
-    hosts: Vec<&'a Host>,
+    hosts: Vec<PublicHost<'a>>,
+}
+
+#[derive(Serialize)]
+struct PublicHost<'a> {
+    id: &'a str,
+    description: &'a str,
 }
 
 #[tool_router]
@@ -50,8 +56,9 @@ impl Postern {
     }
 }
 
-fn allowed_hosts<'a>(hosts: &'a [Host], subject: &str) -> Vec<&'a Host> {
-    hosts.iter().filter(|host| host.allowed_subjects.iter().any(|s| s == subject)).collect()
+fn allowed_hosts<'a>(hosts: &'a [Host], subject: &str) -> Vec<PublicHost<'a>> {
+    hosts.iter().filter(|host| host.allowed_subjects.iter().any(|s| s == subject))
+        .map(|h| PublicHost { id: &h.id, description: &h.description }).collect()
 }
 
 #[tool_handler(
@@ -73,9 +80,12 @@ mod tests {
             Host { id:"b".into(), description:"two".into(), allowed_subjects:vec!["bob".into()] },
             Host { id:"c".into(), description:"three".into(), allowed_subjects:vec![] },
         ];
-        assert_eq!(allowed_hosts(&hosts, "alice").iter().map(|h| h.id.as_str()).collect::<Vec<_>>(), vec!["a"]);
-        assert_eq!(allowed_hosts(&hosts, "bob").iter().map(|h| h.id.as_str()).collect::<Vec<_>>(), vec!["b"]);
+        assert_eq!(allowed_hosts(&hosts, "alice").iter().map(|h| h.id).collect::<Vec<_>>(), vec!["a"]);
+        assert_eq!(allowed_hosts(&hosts, "bob").iter().map(|h| h.id).collect::<Vec<_>>(), vec!["b"]);
         assert!(allowed_hosts(&hosts, "charlie").is_empty());
         assert!(allowed_hosts(&hosts, "ali").is_empty());
+        let json = serde_json::to_value(HostsResponse { hosts: allowed_hosts(&hosts, "alice") }).unwrap();
+        assert_eq!(json, serde_json::json!({"hosts":[{"id":"a","description":"one"}]}));
+        assert!(!json.to_string().contains("allowed_subjects"));
     }
 }
