@@ -8,11 +8,15 @@ pub fn realm() -> Value {
             "access.token.claim":"true", "introspection.token.claim":"true"}});
     let audience = json!({"name":"audience", "protocol":"openid-connect",
         "protocolMapper":"oidc-audience-mapper", "config":{
-            "included.custom.audience":"postern", "included.client.audience":"postern-test", "access.token.claim":"true",
+            "included.custom.audience":"postern", "access.token.claim":"true",
             "introspection.token.claim":"true", "id.token.claim":"false"}});
+    let introspector = json!({"name":"introspection-audience", "protocol":"openid-connect",
+        "protocolMapper":"oidc-audience-mapper", "config":{
+            "included.client.audience":"postern-test","access.token.claim":"true",
+            "introspection.token.claim":"true","id.token.claim":"false"}});
     let clients: Vec<_> = ["postern-test", "postern-caller", "wrong-audience", "short-lived"].into_iter().map(|id| {
         let mut mappers = vec![subject.clone()];
-        if id != "wrong-audience" { mappers.push(audience.clone()); }
+        if id != "wrong-audience" { mappers.extend([audience.clone(), introspector.clone()]); }
         let attributes = if id == "short-lived" { json!({"access.token.lifespan":"3"}) } else { json!({}) };
         json!({"clientId":id, "secret":SECRET, "enabled":true, "protocol":"openid-connect",
             "publicClient":false, "fullScopeAllowed":false, "directAccessGrantsEnabled":true, "standardFlowEnabled":false,

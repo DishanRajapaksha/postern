@@ -14,7 +14,7 @@ Configure a trusted Keycloak realm and an appropriate **confidential introspecti
 - `scope`: includes `postern:use` as a separate word.
 - `exp`: valid future expiry. Optional `nbf`/`iat` cannot be in the future.
 
-On Keycloak 26.6.2 and newer, tokens must also include the **introspection client's ID** in their audience. For example, with required audience `postern` and introspection client `postern-resource`, configure the issuing client's audience mapper to include both values in access tokens and introspection. Keep Keycloak's audience validation enabled. See the [Keycloak migration guidance](https://www.keycloak.org/docs/26.8.1/upgrading/#migrating-to-26-6-2).
+On Keycloak 26.6.2 and newer, tokens must also include the **introspection client's ID** in their audience. For example, with required audience `postern` and introspection client `postern-resource`, configure **two separate audience mappers** on the issuing client: one custom audience `postern` and one client audience `postern-resource`, both enabled for access tokens and introspection. Keep Keycloak's audience validation enabled. See the [Keycloak migration guidance](https://www.keycloak.org/docs/26.8.1/upgrading/#migrating-to-26-6-2).
 
 Postern only accepts tokens when Keycloak introspection returns `active: true`. It rejects missing claims, wrong audiences, issuers or scopes, expired/revoked tokens, and all malformed introspection responses. **No token introspection cache or fallback is permitted.** If Keycloak is unavailable, requests fail closed with HTTP 503. Missing/invalid credentials receive HTTP 401. Token revocation therefore takes effect on the next request, subject to Keycloak's reported active state and availability.
 

@@ -17,8 +17,8 @@ pub async fn create(admin: &Admin, name: &str, diagnostic: bool) -> Result<Strin
             {"name":"postern-subject", "protocol":"openid-connect", "protocolMapper":"oidc-sub-mapper",
              "config":{"access.token.claim":"true","introspection.token.claim":"true"}},
             {"name":"postern-audience", "protocol":"openid-connect", "protocolMapper":"oidc-audience-mapper",
-             "config":{"included.custom.audience":"postern","included.client.audience":"postern-resource",
-                "access.token.claim":"true","introspection.token.claim":"true"}}]
+             "config":{"included.custom.audience":"postern",
+                "access.token.claim":"true","introspection.token.claim":"true"}}, introspection_audience()]
     })).await?;
     let created = admin.get(&format!("/clients?clientId={name}")).await?;
     Ok(created[0]["id"]
@@ -35,26 +35,12 @@ pub async fn secret(admin: &Admin, id: &str) -> Result<String> {
         .into())
 }
 
-pub async fn harden_resource(admin: &Admin) -> Result<()> {
-    let found = admin.get("/clients?clientId=postern-resource").await?;
-    let id = found[0]["id"].as_str().context("missing resource client")?;
-    let path = format!("/clients/{id}");
-    let mut resource = admin.get(&path).await?;
-    ensure!(
-        resource["attributes"]["postern.managed"] == "inventory-preview",
-        "unmanaged resource client"
-    );
-    resource["fullScopeAllowed"] = json!(false);
-    let mappers = resource["protocolMappers"]
-        .as_array_mut()
-        .context("missing resource mappers")?;
-    let audience = mappers
-        .iter_mut()
-        .find(|v| v["name"] == "postern-audience")
-        .context("missing audience mapper")?;
-    audience["config"]["included.client.audience"] = json!("postern-resource");
-    admin.call(Method::PUT, &path, resource).await?;
-    Ok(())
+pub(super) fn introspection_audience() -> Value {
+    // A single Keycloak audience mapper selects one value; two audiences need two mappers.
+    json!({"name":"postern-introspection-audience","protocol":"openid-connect",
+        "protocolMapper":"oidc-audience-mapper","config":{
+            "included.client.audience":"postern-resource","access.token.claim":"true",
+            "introspection.token.claim":"true","id.token.claim":"false"}})
 }
 
 pub async fn diagnostic(admin: &Admin, name: &str, scope: &str) -> Result<Diagnostic> {

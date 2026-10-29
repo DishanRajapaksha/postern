@@ -76,7 +76,7 @@ pub async fn run() -> Result<()> {
 pub async fn diagnostics() -> Result<()> {
     use super::state::ROOT;
     let admin = Admin::new().await?;
-    clients::harden_resource(&admin).await?;
+    super::resource::harden(&admin).await?;
     let path = format!("{ROOT}/private/verification-state.json");
     let mut state: State = serde_json::from_slice(&std::fs::read(path)?)?;
     let scopes = admin.get("/client-scopes").await?;

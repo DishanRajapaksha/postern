@@ -6,5 +6,6 @@ mod clients;
 pub mod diagnose;
 mod exercise;
 mod files;
+mod resource;
 pub mod setup;
 mod state;
