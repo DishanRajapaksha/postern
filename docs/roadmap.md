@@ -1,6 +1,19 @@
 # Implementation and verification plan
 
-Status: plan, not completed work. No code, binary, CI workflow or running MCP endpoint exists yet.
+Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 21 unit tests, mock MCP HTTP tests and Docker integration against disposable Keycloak passing locally on 2026-10-29. See [branch scope validation](branch-scope.md) and [security hardening](hardening.md). No authenticated public endpoint, OAuth discovery, SSH execution, sessions or auditing yet.
+
+## First implementation slice: read-only local MCP inventory (2026-10-29)
+
+- [x] Rust Streamable HTTP MCP server with `hosts()` and explicit JSON host IDs/descriptions.
+- [x] Loopback-only development endpoint with no SSH operations.
+- [x] Strict inventory validation and unit tests (21 passed across configuration, authentication, HTTP limits and host visibility).
+- [x] GitHub Actions formatting, Clippy, unit tests and MCP HTTP smoke test.
+- [x] Commit dependency lockfile, enforce locked builds and declare/test Rust 1.93 as the minimum toolchain.
+- [x] Keycloak introspection gate on every HTTP request, stateless MCP, subject-scoped host visibility and deny-by-default policy (verified against disposable real Keycloak; live user integration remains outstanding).
+- [x] Docker integration with real Keycloak over verified HTTPS, including concurrent subject isolation, expiry, logout revocation and fail-closed authentication errors; CI job added.
+- [ ] Implement OAuth discovery/authorisation flow for the actual ChatGPT connector, verify real Keycloak credentials and live integration before public exposure or SSH execution.
+
+This slice does **not** satisfy the Phase 0 ChatGPT integration gate or the Phase 1 SSH execution milestone.
 
 ## Phase 0: validate feasibility and freeze contract
 

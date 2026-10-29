@@ -4,7 +4,7 @@
 
 Postern is a proposed small, self-hosted server that lets authorised MCP clients, including ChatGPT where custom tool capabilities permit, run arbitrary shell commands on explicitly configured SSH hosts. It is designed around **session-level authorisation, unrestricted commands within the SSH account's privileges, and mandatory audit records**.
 
-> **Status: design only.** This repository currently contains the specification, not a working SSH MCP server. No SSH gateway, authentication integration or audit pipeline has been implemented or security-reviewed.
+> **Status: early development.** PR #1 implements a loopback-only MCP host-inventory server with Keycloak token introspection on **every** HTTP request and subject-scoped host visibility. There is no SSH execution, persistent SSH session, OAuth client discovery, public deployment or audit pipeline. This is not production-ready.
 
 ## Principles
 
@@ -46,15 +46,22 @@ The proposed default authentication provider is **Keycloak** and the preferred i
 
 A **persistent SSH connection is not a persistent interactive shell**. Each `exec` in the initial design starts a fresh remote shell command. Environment changes such as `cd` do not automatically carry between calls. Arbitrary scripts, pipelines and compound commands remain possible.
 
+## Development preview
+
+The first feature, a read-only `hosts()` tool and loopback-only Rust Streamable HTTP MCP server, is under development on `feat/hosts-mcp`. It verifies every HTTP request through Keycloak's HTTPS token-introspection endpoint and filters hosts by the validated `sub`. See [local development instructions](docs/development.md). This is still a **loopback-only preview**; public OAuth discovery and ChatGPT compatibility are not implemented and SSH commands are unavailable. Never expose the development server through a proxy or tunnel.
+
 ## Documentation
 
 - [Requirements and acceptance criteria](docs/requirements.md)
 - [Architecture and lifecycle](docs/architecture.md)
 - [MCP tool contract](docs/mcp-api.md)
 - [Security model and threat analysis](docs/security.md)
+- [Implemented security controls](docs/hardening.md)
+- [Engineering rules and 100-line source limit](CONTRIBUTING.md)
 - [Audit model](docs/auditing.md)
 - [Deployment and configuration design](docs/operations.md)
 - [Implementation and verification plan](docs/roadmap.md)
+- [Current branch scope and Docker verification](docs/branch-scope.md)
 - [ADR 0001: session-authorised, unrestricted execution](docs/adr/0001-session-authorised-execution.md)
 
 ## Project boundaries

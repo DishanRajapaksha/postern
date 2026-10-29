@@ -2,6 +2,8 @@
 
 Status: **proposed security requirements**. Do not deploy as trusted infrastructure before implementation, adversarial testing and review.
 
+The current read-only preview implements a subset; see [implemented controls and remaining deployment requirements](hardening.md) for exact limits, tests and exclusions.
+
 ## Security position
 
 Postern is a remote code execution gateway by design. The user explicitly wants **no server-side command restrictions after session authorisation**. Security therefore rests on authenticating the caller, limiting which SSH accounts/hosts it can reach, isolating credentials, constraining session lifetime, observing usage and reducing blast radius at the operating-system/network layer.
@@ -70,3 +72,9 @@ Consequences:
 - Dependency review, fuzzing of exposed parsers, and secret-scrubbing review.
 
 **Deployment rule:** no production SSH targets or privileged accounts until the acceptance and adversarial tests pass.
+
+## First implementation authentication boundary (2026-10-29)
+
+The current feature branch uses a **stateless MCP** transport and requires Keycloak token introspection for **every HTTP request** before the MCP service is invoked, and again inside `hosts()`. Identity is derived only from the introspected Keycloak `sub`, with exact issuer, audience, required scope, expiry and active-token validation; per-host allowlists default to deny. No MCP session ID can transfer an earlier caller's authorisation to another token. Unexpected/missing claims and Keycloak outages fail closed.
+
+The introspection client is configured locally through environment variables and must be confidential. No static development bypass, anonymous mode, HTTP introspection or token cache is implemented. The gateway remains loopback-only. This establishes a limited read-only authentication prototype, **not** a production security guarantee; external exposure and SSH execution require validated real-Keycloak and ChatGPT integration, OAuth discovery, audit and further adversarial tests.

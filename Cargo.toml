@@ -1,0 +1,31 @@
+[package]
+name = "postern"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+description = "Auditable SSH gateway for MCP clients (early development)"
+publish = false
+
+[dependencies]
+anyhow = "1"
+axum = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+rmcp = { version = "=3.8.0", features = ["server", "macros", "schemars", "transport-streamable-http-server"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time"] }
+zeroize = "1"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+
+[dev-dependencies]
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+tokio = { version = "1", features = ["test-util", "process"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
+hyper-util = { version = "0.1", features = ["server-auto", "service", "tokio"] }

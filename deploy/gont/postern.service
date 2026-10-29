@@ -1,0 +1,41 @@
+# Read-only preview: a dedicated account, no SSH keys and no public routing.
+[Unit]
+Description=Postern authenticated local MCP inventory
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=postern
+Group=postern
+WorkingDirectory=/srv/services/postern
+EnvironmentFile=/srv/services/postern/private/environment
+ExecStart=/srv/services/postern/current/postern
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+LimitCORE=0
+LimitNOFILE=1024
+TasksMax=64
+MemoryMax=256M
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

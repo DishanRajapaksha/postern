@@ -1,0 +1,71 @@
+{
+  "verified_on": "2026-10-30",
+  "host": "gont",
+  "os": "Debian 13.7",
+  "architecture": "x86_64",
+  "application_source_commit": "9a911e6075bfc9ae3e3c1af80c64537028dd709e",
+  "application_implementation_commit": "3ba74fea4cf08b667ace9be5143c95b68f6753f5",
+  "operator_source_commit": "599732f427f3b700cf6d7d2a78b05617493756c3",
+  "docker_suite_source_commit": "ae3a95fdd8ecd200fc102d5e9624d3186605baf1",
+  "binary_sha256": "1f5d03ce9b5195831dcb283e64153b7f6021d16a5db899cee78ebd4b62bad844",
+  "unit_sha256": "d1fcef8497f75d7ec9e24170fe8720714b5aaf4f9e03e872564f3dc8c8976090",
+  "service": {
+    "unit": "postern.service",
+    "user": "postern",
+    "group": "postern",
+    "enabled": true,
+    "active": true,
+    "automatic_restarts": 0,
+    "endpoint": "http://127.0.0.1:8765/mcp",
+    "visibility": "Gont loopback only",
+    "runtime_directory": "/srv/services/postern",
+    "core_dumps": false,
+    "memory_limit_bytes": 268435456
+  },
+  "identity": {
+    "issuer": "https://heimdall.talesfrom.earth/keycloak/realms/gont",
+    "keycloak_version": "26.8.1",
+    "client_id": "postern-resource",
+    "required_audience": "postern",
+    "introspection_client_audience": "postern-resource",
+    "required_scope": "postern:use",
+    "full_scope_allowed": false,
+    "browser_flow": "gont-passkeys",
+    "diagnostic_clients": "deleted",
+    "final_inventory": "gont profile; owner only"
+  },
+  "checks": {
+    "format": "passed",
+    "clippy": "passed",
+    "unit_tests_passed": 21,
+    "rust_https_mock": "passed",
+    "source_size_limit": "passed",
+    "keycloak_2681_docker_mac": "passed",
+    "keycloak_2681_docker_gont": "passed",
+    "separate_token_and_introspection_clients": "passed",
+    "live_initialize": "passed",
+    "live_tools": [
+      "hosts"
+    ],
+    "live_private_shared_denied_grants": "passed",
+    "live_immediate_revocation": "passed",
+    "private_response_headers": "passed",
+    "anonymous_http": 401,
+    "foreign_origin_host_http": 403,
+    "oversized_body_http": 413,
+    "lan_port_8765": "closed",
+    "tailscale_port_8765": "closed",
+    "heimdall_discovery_http": 200,
+    "leyline_mcp_http": 401,
+    "trilium_health_http": 200,
+    "shared_gateway_and_keycloak_files": "unchanged hashes",
+    "secret_environment_permissions": "0600 root:root",
+    "inventory_permissions": "0640 root:postern",
+    "diagnostic_state_file": "removed"
+  },
+  "limits": [
+    "No public MCP route or OAuth login/discovery",
+    "No SSH execution or audit pipeline",
+    "Fresh owner passkey login was not exercised; authenticated acceptance used temporary diagnostic principals"
+  ]
+}

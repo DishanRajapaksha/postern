@@ -1,0 +1,9 @@
+{
+  "hosts": [
+    {
+      "id": "lab",
+      "description": "Disposable test host (illustrative only)",
+      "allowed_subjects": ["00000000-0000-0000-0000-000000000001"]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+services:
+  fixtures:
+    build:
+      context: ../..
+      dockerfile: tests/integration/Dockerfile
+    command: [cargo, test, --locked, --test, fixtures, --, --ignored, --nocapture]
+    volumes:
+      - fixtures:/fixtures
+      - realms:/realms
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
+    command:
+      - start-dev
+      - --import-realm
+      - --http-enabled=false
+      - --hostname=https://localhost:8443
+      - --https-certificate-file=/fixtures/server.pem
+      - --https-certificate-key-file=/fixtures/server-key.pem
+    depends_on:
+      fixtures:
+        condition: service_completed_successfully
+    volumes:
+      - fixtures:/fixtures:ro
+      - realms:/opt/keycloak/data/import:ro
+    mem_limit: 1g
+  integration:
+    build:
+      context: ../..
+      dockerfile: tests/integration/Dockerfile
+    # Exercise the real loopback-only binary without publishing or proxying MCP.
+    network_mode: service:keycloak
+    depends_on:
+      keycloak:
+        condition: service_started
+    volumes:
+      - fixtures:/fixtures:ro
+volumes:
+  fixtures:
+  realms:

@@ -1,0 +1,6 @@
+.git
+target
+.env
+.env.*
+config/postern.local.json
+**/__pycache__
