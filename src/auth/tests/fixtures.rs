@@ -20,10 +20,14 @@ pub(super) fn auth() -> Authenticator {
             client_secret: zeroize::Zeroizing::new("fixture-only".into()),
         },
         permits: std::sync::Arc::new(tokio::sync::Semaphore::new(32)),
-        discovery: std::sync::Arc::new(crate::oauth::Discovery::new(
-            "https://postern.example/mcp",
-            "https://keycloak.example/realms/postern", "postern:use",
-        ).unwrap()),
+        discovery: std::sync::Arc::new(
+            crate::oauth::Discovery::new(
+                "https://postern.example/mcp",
+                "https://keycloak.example/realms/postern",
+                "postern:use",
+            )
+            .unwrap(),
+        ),
     }
 }
 
