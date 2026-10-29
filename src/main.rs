@@ -6,6 +6,7 @@ mod auth;
 mod config;
 mod http;
 mod mcp;
+mod oauth;
 
 use std::{
     env,
@@ -32,6 +33,7 @@ async fn main() -> Result<()> {
     // Fail startup unless the Keycloak issuer, audience, client and required
     // scope are configured. Never fall back to anonymous or 'dev' credentials.
     let auth = Arc::new(Authenticator::from_environment()?);
+    let discovery = Arc::clone(&auth.discovery);
     let hosts = Arc::new(config.hosts);
 
     // No configurable bind address in this feature: restrict to loopback.
@@ -51,13 +53,17 @@ async fn main() -> Result<()> {
             .with_legacy_session_mode(false)
             .with_json_response(true),
     );
-    let router = Router::new()
+    let protected = Router::new()
         .nest_service("/mcp", service)
         .layer(middleware::from_fn_with_state(
             Arc::clone(&auth),
             auth::require_auth,
         ))
-        // Last-added middleware runs first, before token introspection or MCP parsing.
+    let router = Router::new()
+        .merge(protected)
+        // Anonymous access is allowed ONLY to static OAuth metadata.
+        .merge(oauth::Discovery::router(discovery))
+        // Last-added middleware runs first, before MCP parsing.
         .layer(middleware::from_fn_with_state(
             Arc::new(http::Limits::default()),
             http::protect,
