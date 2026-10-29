@@ -1,6 +1,6 @@
 //! Discovery requires current credentials and exposes only the implemented hosts tool.
-use crate::support::client::Mcp;
 use super::ISSUER;
+use crate::support::client::Mcp;
 use anyhow::{Result, ensure};
 use reqwest::Method;
 use serde_json::json;
