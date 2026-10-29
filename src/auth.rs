@@ -65,6 +65,7 @@ impl Audience {
 #[derive(Deserialize)]
 struct Introspection {
     active: bool,
+    token_type: Option<String>,
     sub: Option<String>,
     iss: Option<String>,
     aud: Option<Audience>,
@@ -175,6 +176,7 @@ impl Authenticator {
 
     fn verify_claims(&self, claims: Introspection, now: i64) -> Result<Principal, AuthError> {
         if !claims.active
+            || claims.token_type.as_deref() != Some("Bearer")
             || claims.iss.as_deref() != Some(self.issuer.as_str())
             || !claims
                 .aud
@@ -272,6 +274,7 @@ mod tests {
     fn claims(now: i64) -> Introspection {
         Introspection {
             active: true,
+            token_type: Some("Bearer".into()),
             sub: Some("user-id".into()),
             iss: Some("https://keycloak.example/realms/postern".into()),
             aud: Some(Audience::Many(vec!["other".into(), "postern".into()])),
@@ -308,6 +311,9 @@ mod tests {
         let a = auth();
         let mut c = claims(1000);
         c.active = false;
+        assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.token_type = Some("Refresh".into());
         assert!(a.verify_claims(c, 1000).is_err());
         let mut c = claims(1000);
         c.exp = Some(1000);
