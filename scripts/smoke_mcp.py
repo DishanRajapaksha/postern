@@ -121,10 +121,10 @@ def main():
         cert = Path(tmp) / "server-cert.pem"
         extensions = Path(tmp) / "extensions.conf"
         extensions.write_text(
-            "basicConstraints=critical,CA:FALSE\\n"
-            "keyUsage=critical,digitalSignature,keyEncipherment\\n"
-            "extendedKeyUsage=serverAuth\\n"
-            "subjectAltName=DNS:localhost\\n"
+            "basicConstraints=critical,CA:FALSE\n"
+            "keyUsage=critical,digitalSignature,keyEncipherment\n"
+            "extendedKeyUsage=serverAuth\n"
+            "subjectAltName=DNS:localhost\n"
         )
         def openssl(*args):
             subprocess.run(["openssl", *map(str, args)], check=True,
