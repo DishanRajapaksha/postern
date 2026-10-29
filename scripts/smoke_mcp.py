@@ -135,6 +135,16 @@ def main():
             "POSTERN_KEYCLOAK_CLIENT_SECRET": "fixture-secret",
             "POSTERN_KEYCLOAK_CA_FILE": str(cert),
         })
+        # Independently verify the HTTPS test issuer before Postern starts. This
+        # tests TLS, Basic auth and the mock endpoint without disabling TLS.
+        test_req = urllib.request.Request(
+            FakeKeycloak.issuer + "/protocol/openid-connect/token/introspect",
+            data=urllib.parse.urlencode({"token": "inactive"}).encode(),
+            headers={"Authorization": "Basic " + base64.b64encode(b"postern-test:fixture-secret").decode()},
+            method="POST",
+        )
+        with urllib.request.urlopen(test_req, context=ssl.create_default_context(cafile=str(cert)), timeout=5) as response:
+            assert json.load(response)["active"] is False
         p = subprocess.Popen(["target/debug/postern"], env=env,
                              stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         try:
@@ -166,6 +176,9 @@ def main():
             send(new_request("tools/call", 14, "inactive", {"name": "hosts", "arguments": {}}), 401)
             assert FakeKeycloak.calls >= 13, f"Expected Keycloak introspection for every call, got {FakeKeycloak.calls}"
             print("PASS: HTTPS token introspection, deny-by-default, cross-user isolation, MCP hosts")
+        except BaseException:
+            print(f"Fake Keycloak served {FakeKeycloak.calls} introspection requests", file=sys.stderr)
+            raise
         finally:
             p.terminate()
             try:
