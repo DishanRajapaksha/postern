@@ -29,7 +29,7 @@ pub async fn check(response: reqwest::Response, status: u16, method: &str) -> Re
             response
                 .headers()
                 .get("www-authenticate")
-                .is_some_and(|v| v == "Bearer")
+                .is_some_and(|v| v == "Bearer resource_metadata=\"https://postern.example/.well-known/oauth-protected-resource\", scope=\"postern:use\"")
         );
     }
     if status != 200 {
