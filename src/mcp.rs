@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler,
-    handler::server::{router::tool::ToolRouter, wrapper::Parameters},
+    handler::server::router::tool::ToolRouter,
     model::{CallToolResult, ContentBlock},
     service::RequestContext,
     tool, tool_handler, tool_router,
