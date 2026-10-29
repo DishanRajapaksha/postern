@@ -1,5 +1,6 @@
 //! Discovery requires current credentials and exposes only the implemented hosts tool.
 use crate::support::client::Mcp;
+use super::ISSUER;
 use anyhow::{Result, ensure};
 use reqwest::Method;
 use serde_json::json;
@@ -17,6 +18,20 @@ pub async fn run(mcp: &Mcp, alice: &str, bob: &str) -> Result<()> {
             &[],
         )
         .await?;
+    }
+    let client = reqwest::Client::builder().no_proxy().build()?;
+    for path in [
+        "/.well-known/oauth-protected-resource",
+        "/.well-known/oauth-protected-resource/mcp",
+    ] {
+        let result = client
+            .get(format!("http://127.0.0.1:8765{path}"))
+            .send()
+            .await?;
+        ensure!(result.status() == 200 && result.headers()["cache-control"] == "no-store");
+        let metadata: serde_json::Value = result.json().await?;
+        ensure!(metadata["authorization_servers"][0] == ISSUER);
+        ensure!(metadata["resource"] == "https://postern.example/mcp");
     }
     let duplicate = format!("Bearer {bob}");
     mcp.request(
