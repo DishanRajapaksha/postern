@@ -20,7 +20,10 @@ async fn mcp_rechecks_tokens_and_never_leaks_another_subjects_hosts() -> Result<
         ),
         ("POSTERN_KEYCLOAK_ISSUER", issuer.state.issuer.clone()),
         ("POSTERN_KEYCLOAK_AUDIENCE", "postern".into()),
-        ("POSTERN_OAUTH_RESOURCE", "https://postern.example/mcp".into()),
+        (
+            "POSTERN_OAUTH_RESOURCE",
+            "https://postern.example/mcp".into(),
+        ),
         ("POSTERN_KEYCLOAK_SCOPE", "postern:use".into()),
         ("POSTERN_KEYCLOAK_CLIENT_ID", "postern-test".into()),
         ("POSTERN_KEYCLOAK_CLIENT_SECRET", "fixture-secret".into()),
@@ -38,8 +41,10 @@ async fn mcp_rechecks_tokens_and_never_leaks_another_subjects_hosts() -> Result<
         "/.well-known/oauth-protected-resource",
         "/.well-known/oauth-protected-resource/mcp",
     ] {
-        let response = client.get(format!("http://127.0.0.1:8765{path}"))
-            .send().await?;
+        let response = client
+            .get(format!("http://127.0.0.1:8765{path}"))
+            .send()
+            .await?;
         anyhow::ensure!(response.status() == 200);
         anyhow::ensure!(response.headers()["cache-control"] == "no-store");
         let meta: serde_json::Value = response.json().await?;
