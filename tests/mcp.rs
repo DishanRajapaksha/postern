@@ -32,6 +32,21 @@ async fn mcp_rechecks_tokens_and_never_leaks_another_subjects_hosts() -> Result<
         env.insert(name.into(), value);
     }
     let mut server = Postern::start(&env).await?;
+    // Only static discovery is anonymous. All MCP methods still require a token.
+    let client = reqwest::Client::builder().no_proxy().build()?;
+    for path in [
+        "/.well-known/oauth-protected-resource",
+        "/.well-known/oauth-protected-resource/mcp",
+    ] {
+        let response = client.get(format!("http://127.0.0.1:8765{path}"))
+            .send().await?;
+        anyhow::ensure!(response.status() == 200);
+        anyhow::ensure!(response.headers()["cache-control"] == "no-store");
+        let meta: serde_json::Value = response.json().await?;
+        anyhow::ensure!(meta["resource"] == "https://postern.example/mcp");
+        anyhow::ensure!(meta["authorization_servers"][0] == issuer.state.issuer);
+        anyhow::ensure!(meta["scopes_supported"][0] == "postern:use");
+    }
     mock::scenarios::run(&Mcp::new()?, &issuer).await?;
     server.assert_private_logs(&["fixture-secret"])?;
     Ok(())
