@@ -111,13 +111,30 @@ def ready(process):
 
 def main():
     with tempfile.TemporaryDirectory(prefix="postern-auth-test-") as tmp:
-        key = Path(tmp) / "key.pem"
-        cert = Path(tmp) / "cert.pem"
-        subprocess.run([
-            "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
-            "-keyout", str(key), "-out", str(cert), "-days", "1",
-            "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost",
-        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Rustls correctly rejects a CA certificate used directly as a TLS
+        # leaf. Generate a proper local CA and a distinct signed server leaf.
+        ca_key = Path(tmp) / "ca-key.pem"
+        ca_cert = Path(tmp) / "ca-cert.pem"
+        key = Path(tmp) / "server-key.pem"
+        csr = Path(tmp) / "server.csr"
+        cert = Path(tmp) / "server-cert.pem"
+        extensions = Path(tmp) / "extensions.conf"
+        extensions.write_text(
+            "basicConstraints=critical,CA:FALSE\\n"
+            "keyUsage=critical,digitalSignature,keyEncipherment\\n"
+            "extendedKeyUsage=serverAuth\\n"
+            "subjectAltName=DNS:localhost\\n"
+        )
+        def openssl(*args):
+            subprocess.run(["openssl", *map(str, args)], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        openssl("req", "-x509", "-newkey", "rsa:2048", "-nodes",
+                "-keyout", ca_key, "-out", ca_cert, "-days", "1",
+                "-subj", "/CN=Postern CI CA", "-addext", "basicConstraints=critical,CA:TRUE")
+        openssl("req", "-new", "-newkey", "rsa:2048", "-nodes",
+                "-keyout", key, "-out", csr, "-subj", "/CN=localhost")
+        openssl("x509", "-req", "-in", csr, "-CA", ca_cert, "-CAkey", ca_key,
+                "-CAcreateserial", "-out", cert, "-days", "1", "-extfile", extensions)
         server = ThreadingHTTPServer(("127.0.0.1", 0), FakeKeycloak)
         FakeKeycloak.issuer = f"https://localhost:{server.server_port}/realms/test"
         ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -133,7 +150,7 @@ def main():
             "POSTERN_KEYCLOAK_SCOPE": "postern:use",
             "POSTERN_KEYCLOAK_CLIENT_ID": "postern-test",
             "POSTERN_KEYCLOAK_CLIENT_SECRET": "fixture-secret",
-            "POSTERN_KEYCLOAK_CA_FILE": str(cert),
+            "POSTERN_KEYCLOAK_CA_FILE": str(ca_cert),
         })
         # Independently verify the HTTPS test issuer before Postern starts. This
         # tests TLS, Basic auth and the mock endpoint without disabling TLS.
@@ -143,7 +160,7 @@ def main():
             headers={"Authorization": "Basic " + base64.b64encode(b"postern-test:fixture-secret").decode()},
             method="POST",
         )
-        with urllib.request.urlopen(test_req, context=ssl.create_default_context(cafile=str(cert)), timeout=5) as response:
+        with urllib.request.urlopen(test_req, context=ssl.create_default_context(cafile=str(ca_cert)), timeout=5) as response:
             assert json.load(response)["active"] is False
         p = subprocess.Popen(["target/debug/postern"], env=env,
                              stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
