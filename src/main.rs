@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
         .layer(middleware::from_fn_with_state(
             Arc::clone(&auth),
             auth::require_auth,
-        ))
+        ));
     let router = Router::new()
         .merge(protected)
         // Anonymous access is allowed ONLY to static OAuth metadata.
