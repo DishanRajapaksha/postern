@@ -39,6 +39,8 @@ pub async fn run(issuer: &Issuer) -> Result<()> {
             "http://localhost:8443/realms/postern-test",
         ),
         ("POSTERN_CONFIG", "/nonexistent-inventory.json"),
+        ("POSTERN_OAUTH_RESOURCE", "http://postern.example/mcp"),
+        ("POSTERN_OAUTH_RESOURCE", "https://postern.example/mcp?query=1"),
     ] {
         let mut env = environment::configured();
         env.insert(name.into(), value.into());
@@ -54,5 +56,13 @@ pub async fn run(issuer: &Issuer) -> Result<()> {
         );
         ensure!(!String::from_utf8_lossy(&output.stderr).contains(SECRET));
     }
+    // OAuth discovery must be configured before the server can listen.
+    let mut env = environment::configured();
+    env.remove("POSTERN_OAUTH_RESOURCE");
+    let mut child = tokio::process::Command::from(command(&env));
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(10), child.kill_on_drop(true).output(),
+    ).await??;
+    ensure!(!output.status.success(), "missing OAuth resource was accepted");
     Ok(())
 }
