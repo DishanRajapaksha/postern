@@ -1,110 +1,180 @@
 #!/usr/bin/env python3
-"""Smoke-test the *actual* local MCP wire protocol. No network access beyond loopback."""
+"""Exercise the authenticated MCP endpoint over real HTTPS introspection.
 
+The fake local Keycloak endpoint is ONLY for CI. Postern requires TLS and a
+configured trust root even in tests. No actual Keycloak or SSH host is used.
+"""
+import base64
 import json
 import os
 import socket
+import ssl
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
-ENDPOINT = "http://127.0.0.1:8765/mcp"
+MCP = "http://127.0.0.1:8765/mcp"
+SUBJECT = "00000000-0000-0000-0000-000000000001"
 
 
-def mcp_call(method, request_id, params=None):
-    payload = {
-        "jsonrpc": "2.0",
-        "id": request_id,
-        "method": method,
-        "params": {} if params is None else params,
+class FakeKeycloak(BaseHTTPRequestHandler):
+    calls = 0
+    issuer = ""
+
+    def do_POST(self):
+        self.__class__.calls += 1
+        expected_auth = "Basic " + base64.b64encode(b"postern-test:fixture-secret").decode()
+        if (self.path != "/realms/test/protocol/openid-connect/token/introspect"
+                or self.headers.get("Authorization") != expected_auth):
+            self.send_error(401)
+            return
+        length = int(self.headers.get("Content-Length", "0"))
+        params = urllib.parse.parse_qs(self.rfile.read(length).decode())
+        token = params.get("token", [""])[0]
+        if token == "outage":
+            self.send_error(503)
+            return
+        now = int(time.time())
+        claims = {
+            "active": token in ("alice", "bob", "expired", "wrong-aud", "wrong-iss", "wrong-scope"),
+            "sub": SUBJECT if token != "bob" else "other-user",
+            "iss": self.issuer if token != "wrong-iss" else "https://malicious.example/realms/test",
+            "aud": ["postern"] if token != "wrong-aud" else ["another-service"],
+            "scope": "postern:use" if token != "wrong-scope" else "other",
+            "exp": now + 600 if token != "expired" else now - 10,
+            "nbf": now - 10,
+        }
+        data = json.dumps(claims).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def log_message(self, *_):
+        pass
+
+
+def new_request(method, id_num, token=None, params=None):
+    payload = json.dumps({
+        "jsonrpc": "2.0", "id": id_num, "method": method,
+        "params": params or {},
+    }).encode()
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+        "MCP-Protocol-Version": "2025-11-25",
     }
-    request = urllib.request.Request(
-        ENDPOINT,
-        data=json.dumps(payload).encode("utf-8"),
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream",
-            "MCP-Protocol-Version": "2025-11-25",
-        },
-    )
-    with urllib.request.urlopen(request, timeout=10) as response:
-        text = response.read().decode("utf-8")
-        content_type = response.headers.get("Content-Type", "")
-    if "text/event-stream" in content_type:
-        messages = [
-            json.loads(line[5:].strip())
-            for line in text.splitlines()
-            if line.startswith("data:")
-        ]
-        assert messages, f"No JSON event in SSE response: {text!r}"
-        result = next((v for v in messages if v.get("id") == request_id), messages[-1])
-    else:
-        result = json.loads(text)
-    if "error" in result:
-        raise AssertionError(f"MCP {method} failed: {result['error']}")
-    assert result.get("id") == request_id, result
-    return result["result"]
+    if token is not None:
+        headers["Authorization"] = "Bearer " + token
+    return urllib.request.Request(MCP, data=payload, method="POST", headers=headers)
 
 
-def wait_until_ready(process):
-    for _ in range(60):
+def send(request, expected=200):
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            status = response.status
+            body = response.read().decode()
+            mime = response.headers.get("Content-Type", "")
+    except urllib.error.HTTPError as error:
+        status = error.code
+        body = error.read().decode()
+        mime = ""
+    assert status == expected, f"Expected HTTP {expected}, got {status}: {body[:250]}"
+    if status != 200:
+        return None
+    if "text/event-stream" in mime:
+        entries = [json.loads(line[5:].strip()) for line in body.splitlines() if line.startswith("data:")]
+        assert entries, body
+        return entries[-1]
+    return json.loads(body)
+
+
+def ready(process):
+    for _ in range(100):
         if process.poll() is not None:
-            raise RuntimeError(f"Postern exited during startup with {process.returncode}")
+            raise RuntimeError(f"Postern stopped unexpectedly: {process.returncode}")
         try:
             with socket.create_connection(("127.0.0.1", 8765), timeout=0.2):
                 return
         except OSError:
             time.sleep(0.1)
-    raise TimeoutError("Postern development endpoint did not start")
+    raise TimeoutError("Postern failed to listen")
 
 
 def main():
-    env = os.environ.copy()
-    env["POSTERN_CONFIG"] = "config/postern.example.json"
-    process = subprocess.Popen(
-        ["target/debug/postern"],
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-    )
-    try:
-        wait_until_ready(process)
-        initialise = mcp_call(
-            "initialize",
-            1,
-            {
-                "protocolVersion": "2025-11-25",
-                "capabilities": {},
-                "clientInfo": {"name": "postern-smoke", "version": "0.1.0"},
-            },
-        )
-        assert "capabilities" in initialise, initialise
-        tools = mcp_call("tools/list", 2)
-        names = [item["name"] for item in tools["tools"]]
-        assert names == ["hosts"], names
-        result = mcp_call("tools/call", 3, {"name": "hosts", "arguments": {}})
-        payload = json.loads(result["content"][0]["text"])
-        assert payload == {
-            "hosts": [
-                {
-                    "id": "lab",
-                    "description": "Disposable local test machine (illustrative only)",
-                }
-            ]
-        }, payload
-        print("MCP initialize, tools/list, and hosts() passed")
-    finally:
-        process.terminate()
+    with tempfile.TemporaryDirectory(prefix="postern-auth-test-") as tmp:
+        key = Path(tmp) / "key.pem"
+        cert = Path(tmp) / "cert.pem"
+        subprocess.run([
+            "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+            "-keyout", str(key), "-out", str(cert), "-days", "1",
+            "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost",
+        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        server = ThreadingHTTPServer(("127.0.0.1", 0), FakeKeycloak)
+        FakeKeycloak.issuer = f"https://localhost:{server.server_port}/realms/test"
+        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_ctx.load_cert_chain(certfile=str(cert), keyfile=str(key))
+        server.socket = ssl_ctx.wrap_socket(server.socket, server_side=True)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        env = os.environ.copy()
+        env.update({
+            "POSTERN_CONFIG": "config/postern.example.json",
+            "POSTERN_KEYCLOAK_ISSUER": FakeKeycloak.issuer,
+            "POSTERN_KEYCLOAK_AUDIENCE": "postern",
+            "POSTERN_KEYCLOAK_SCOPE": "postern:use",
+            "POSTERN_KEYCLOAK_CLIENT_ID": "postern-test",
+            "POSTERN_KEYCLOAK_CLIENT_SECRET": "fixture-secret",
+            "POSTERN_KEYCLOAK_CA_FILE": str(cert),
+        })
+        p = subprocess.Popen(["target/debug/postern"], env=env,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         try:
-            _, stderr = process.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            _, stderr = process.communicate()
-        if process.returncode not in (0, -15):
-            print(stderr.decode("utf-8", errors="replace"), file=sys.stderr)
+            ready(p)
+            send(new_request("initialize", 1), 401)
+            send(new_request("tools/list", 2, "inactive"), 401)
+            send(new_request("initialize", 3, "expired"), 401)
+            send(new_request("initialize", 4, "wrong-aud"), 401)
+            send(new_request("initialize", 5, "wrong-iss"), 401)
+            send(new_request("initialize", 6, "wrong-scope"), 401)
+            send(new_request("initialize", 7, "outage"), 503)
+            for method in ("GET", "DELETE"):
+                send(urllib.request.Request(MCP, method=method), 401)
+            init = send(new_request("initialize", 10, "alice", {
+                "protocolVersion": "2025-11-25", "capabilities": {},
+                "clientInfo": {"name": "postern-auth-smoke", "version": "0.1.0"}
+            }))
+            assert "capabilities" in init["result"], init
+            assert "mcp-session-id" not in {k.lower() for k in init.get("headers", {})}
+            tools = send(new_request("tools/list", 11, "bob"))
+            assert [t["name"] for t in tools["result"]["tools"]] == ["hosts"]
+            alice = send(new_request("tools/call", 12, "alice", {"name": "hosts", "arguments": {}}))
+            bob = send(new_request("tools/call", 13, "bob", {"name": "hosts", "arguments": {}}))
+            for result, expected in [(alice, [{"id": "lab", "description": "Disposable test host (illustrative only)"}]), (bob, [])]:
+                assert "error" not in result, result
+                hosts = json.loads(result["result"]["content"][0]["text"])
+                assert hosts == {"hosts": expected}, hosts
+                assert "allowed_subjects" not in str(hosts)
+            send(new_request("tools/call", 14, "inactive", {"name": "hosts", "arguments": {}}), 401)
+            assert FakeKeycloak.calls >= 13, f"Expected Keycloak introspection for every call, got {FakeKeycloak.calls}"
+            print("PASS: HTTPS token introspection, deny-by-default, cross-user isolation, MCP hosts")
+        finally:
+            p.terminate()
+            try:
+                p.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                p.communicate()
+            server.shutdown()
+            server.server_close()
 
 
 if __name__ == "__main__":
