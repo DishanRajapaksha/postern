@@ -72,3 +72,27 @@ pub async fn run() -> Result<()> {
     );
     Ok(())
 }
+
+pub async fn diagnostics() -> Result<()> {
+    use super::state::ROOT;
+    let admin = Admin::new().await?;
+    let path = format!("{ROOT}/private/verification-state.json");
+    let mut state: State = serde_json::from_slice(&std::fs::read(path)?)?;
+    let scopes = admin.get("/client-scopes").await?;
+    let scope = scopes
+        .as_array()
+        .context("invalid scope list")?
+        .iter()
+        .find(|v| v["name"] == "postern:use")
+        .context("missing Postern scope")?["id"]
+        .as_str()
+        .context("missing scope ID")?;
+    state.diagnostics.clear();
+    for suffix in ["alpha", "beta", "denied"] {
+        state.diagnostics.push(
+            clients::diagnostic(&admin, &format!("postern-diagnostic-{suffix}"), scope).await?,
+        );
+        files::private("verification-state.json", &serde_json::to_vec(&state)?)?;
+    }
+    Ok(())
+}

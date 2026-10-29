@@ -13,3 +13,15 @@ async fn prepare_gont_preview() -> anyhow::Result<()> {
 async fn verify_gont_preview() -> anyhow::Result<()> {
     live::accept::run().await
 }
+
+#[tokio::test]
+#[ignore = "reports only security-claim predicates, never tokens or credentials"]
+async fn diagnose_gont_claims() -> anyhow::Result<()> {
+    live::diagnose::run().await
+}
+
+#[tokio::test]
+#[ignore = "recreates temporary diagnostics after a failed initial acceptance"]
+async fn prepare_gont_diagnostics() -> anyhow::Result<()> {
+    live::setup::diagnostics().await
+}
