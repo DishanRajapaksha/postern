@@ -6,7 +6,7 @@ use std::sync::Arc;
 use rmcp::{
     ErrorData as McpError, ServerHandler,
     handler::server::router::tool::ToolRouter,
-    model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig},
+    model::{CallToolResult, ContentBlock},
     tool, tool_handler, tool_router,
 };
 use serde::Serialize;
@@ -46,14 +46,13 @@ impl Postern {
     }
 }
 
-#[tool_handler]
-impl ServerHandler for Postern {
-    fn get_info(&self) -> ServerConfig {
-        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::from_build_env())
-            .with_instructions("Postern development preview. Read-only host listing only. No SSH sessions or command execution. Not authenticated: loopback testing only.".to_owned())
-    }
-}
+#[tool_handler(
+    router = self.tool_router,
+    name = "postern",
+    version = "0.1.0",
+    instructions = "Postern development preview. Read-only host listing only. No SSH sessions or command execution. Not authenticated: loopback testing only."
+)]
+impl ServerHandler for Postern {}
 
 #[cfg(test)]
 mod tests {
