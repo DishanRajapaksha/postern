@@ -1,6 +1,6 @@
 # Implementation and verification plan
 
-Status: project roadmap. First read-only MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 10 unit tests and local MCP HTTP smoke test passing on 2026-10-29. No authenticated public endpoint, SSH execution, sessions or auditing yet.
+Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 10 unit tests and local MCP HTTP smoke test passing on 2026-10-29. No authenticated public endpoint, OAuth discovery, SSH execution, sessions or auditing yet.
 
 ## First implementation slice: read-only local MCP inventory (2026-10-29)
 
@@ -9,7 +9,8 @@ Status: project roadmap. First read-only MCP host-inventory development slice im
 - [x] Strict inventory validation and unit tests (10 passed).
 - [x] GitHub Actions formatting, Clippy, unit tests and MCP HTTP smoke test.
 - [ ] Commit dependency lockfile, and establish precise minimum Rust version.
-- [ ] Authenticate requests before any network exposure or SSH execution.
+- [x] Keycloak introspection gate on every HTTP request, stateless MCP, subject-scoped host visibility and deny-by-default policy (feature branch, pending verification against actual Keycloak).
+- [ ] Implement OAuth discovery/authorisation flow for the actual ChatGPT connector, verify real Keycloak credentials and live integration before public exposure or SSH execution.
 
 This slice does **not** satisfy the Phase 0 ChatGPT integration gate or the Phase 1 SSH execution milestone.
 

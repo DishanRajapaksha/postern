@@ -83,3 +83,9 @@ Expose non-sensitive counters (requests, authorisation denials, active sessions,
 Document commands to invalidate every session, disable a host profile, revoke a Keycloak grant, rotate a key, replace a pinned host key with out-of-band verification, check audit integrity, restore from backup and identify unresolved executions after restart.
 
 **Do not claim that a timeout, SIGTERM or connection close will kill every remote child process.**
+
+## Current Keycloak-authenticated development preview
+
+The first feature branch implements per-request Keycloak **HTTPS introspection**, without caching, and an explicit `allowed_subjects` inventory policy. See [development.md](development.md) for actual supported settings and a loopback-only setup. The YAML example above remains a future design sketch and is **not** accepted by the current executable.
+
+There is no production OAuth discovery/login flow or SSH transport. The preview **must not** be deployed through Cloudflare Tunnel or any other public proxy. Every MCP HTTP request is authenticated through Keycloak even when it only initialises or lists tools; `hosts()` rechecks the token before applying the subject-specific allowlist. Upstream identity failures deny requests, rather than using cached identities.

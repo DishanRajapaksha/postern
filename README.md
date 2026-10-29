@@ -4,7 +4,7 @@
 
 Postern is a proposed small, self-hosted server that lets authorised MCP clients, including ChatGPT where custom tool capabilities permit, run arbitrary shell commands on explicitly configured SSH hosts. It is designed around **session-level authorisation, unrestricted commands within the SSH account's privileges, and mandatory audit records**.
 
-> **Status: early development.** A read-only local MCP `hosts` tool is implemented on a feature branch. There is no SSH execution, OAuth, or audit pipeline. The preview must not be deployed publicly or treated as a working SSH gateway.
+> **Status: early development.** PR #1 implements a loopback-only MCP host-inventory server with Keycloak token introspection on **every** HTTP request and subject-scoped host visibility. There is no SSH execution, persistent SSH session, OAuth client discovery, public deployment or audit pipeline. This is not production-ready.
 
 ## Principles
 
@@ -48,7 +48,7 @@ A **persistent SSH connection is not a persistent interactive shell**. Each `exe
 
 ## Development preview
 
-The first feature, a read-only `hosts()` tool and loopback-only Rust Streamable HTTP MCP server, is under development on `feat/hosts-mcp`. See [local development instructions](docs/development.md). This preview is **unauthenticated** and intentionally incapable of SSH connections, so it must never be exposed through a proxy or tunnel.
+The first feature, a read-only `hosts()` tool and loopback-only Rust Streamable HTTP MCP server, is under development on `feat/hosts-mcp`. It verifies every HTTP request through Keycloak's HTTPS token-introspection endpoint and filters hosts by the validated `sub`. See [local development instructions](docs/development.md). This is still a **loopback-only preview**; public OAuth discovery and ChatGPT compatibility are not implemented and SSH commands are unavailable. Never expose the development server through a proxy or tunnel.
 
 ## Documentation
 
