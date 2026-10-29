@@ -20,6 +20,7 @@ async fn mcp_rechecks_tokens_and_never_leaks_another_subjects_hosts() -> Result<
         ),
         ("POSTERN_KEYCLOAK_ISSUER", issuer.state.issuer.clone()),
         ("POSTERN_KEYCLOAK_AUDIENCE", "postern".into()),
+        ("POSTERN_OAUTH_RESOURCE", "https://postern.example/mcp".into()),
         ("POSTERN_KEYCLOAK_SCOPE", "postern:use".into()),
         ("POSTERN_KEYCLOAK_CLIENT_ID", "postern-test".into()),
         ("POSTERN_KEYCLOAK_CLIENT_SECRET", "fixture-secret".into()),
