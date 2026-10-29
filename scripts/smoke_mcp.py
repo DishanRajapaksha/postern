@@ -43,6 +43,7 @@ class FakeKeycloak(BaseHTTPRequestHandler):
             return
         now = int(time.time())
         claims = {
+            "token_type": "Bearer",
             "active": token in ("alice", "bob", "expired", "wrong-aud", "wrong-iss", "wrong-scope"),
             "sub": SUBJECT if token != "bob" else "other-user",
             "iss": self.issuer if token != "wrong-iss" else "https://malicious.example/realms/test",
