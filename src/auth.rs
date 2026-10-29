@@ -2,7 +2,12 @@
 //! Every incoming MCP HTTP request is checked with Keycloak, without caching.
 //! Any missing/invalid response or upstream outage fails closed.
 
-use std::{env, fs, path::Path, sync::Arc, time::{Duration, SystemTime, UNIX_EPOCH}};
+use std::{
+    env, fs,
+    path::Path,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use anyhow::{Context, Result, bail, ensure};
 use axum::{
@@ -71,7 +76,10 @@ struct Introspection {
 
 fn required_env(name: &str) -> Result<String> {
     let value = env::var(name).with_context(|| format!("missing {name}"))?;
-    ensure!(!value.trim().is_empty() && value == value.trim(), "{name} is empty or invalid");
+    ensure!(
+        !value.trim().is_empty() && value == value.trim(),
+        "{name} is empty or invalid"
+    );
     Ok(value)
 }
 
@@ -90,7 +98,8 @@ fn introspection_url(issuer: &str) -> Result<Url> {
     ensure!(
         parsed.path_segments().is_some_and(|mut segments| {
             let parts: Vec<_> = segments.by_ref().collect();
-            parts.len() >= 2 && parts[parts.len() - 2] == "realms"
+            parts.len() >= 2
+                && parts[parts.len() - 2] == "realms"
                 && !parts[parts.len() - 1].is_empty()
         }),
         "issuer must be a Keycloak realm URL ending in /realms/<realm>"
@@ -108,7 +117,10 @@ impl Authenticator {
         let endpoint = introspection_url(&issuer)?;
         let audience = required_env("POSTERN_KEYCLOAK_AUDIENCE")?;
         let required_scope = required_env("POSTERN_KEYCLOAK_SCOPE")?;
-        ensure!(!required_scope.chars().any(char::is_whitespace), "required scope must be one token");
+        ensure!(
+            !required_scope.chars().any(char::is_whitespace),
+            "required scope must be one token"
+        );
         let client_id = required_env("POSTERN_KEYCLOAK_CLIENT_ID")?;
         let client_secret = required_env("POSTERN_KEYCLOAK_CLIENT_SECRET")?;
         let mut builder = Client::builder()
@@ -120,11 +132,21 @@ impl Authenticator {
             ensure!(!path.is_empty(), "empty CA certificate path");
             let cert = fs::read(Path::new(&path)).context("cannot read Keycloak CA file")?;
             builder = builder.add_root_certificate(
-                reqwest::Certificate::from_pem(&cert).context("invalid Keycloak CA PEM")?
+                reqwest::Certificate::from_pem(&cert).context("invalid Keycloak CA PEM")?,
             );
         }
-        let client = builder.build().context("cannot build Keycloak HTTP client")?;
-        Ok(Self { client, endpoint, issuer, audience, required_scope, client_id, client_secret })
+        let client = builder
+            .build()
+            .context("cannot build Keycloak HTTP client")?;
+        Ok(Self {
+            client,
+            endpoint,
+            issuer,
+            audience,
+            required_scope,
+            client_id,
+            client_secret,
+        })
     }
 
     fn read_bearer<'a>(&self, headers: &'a HeaderMap) -> Result<&'a str, AuthError> {
@@ -134,10 +156,14 @@ impl Authenticator {
             return Err(AuthError::Unauthorised);
         }
         let header = first.to_str().map_err(|_| AuthError::Unauthorised)?;
-        let token = header.strip_prefix("Bearer ").ok_or(AuthError::Unauthorised)?;
-        if token.is_empty() || token.len() > MAX_BEARER_BYTES
+        let token = header
+            .strip_prefix("Bearer ")
+            .ok_or(AuthError::Unauthorised)?;
+        if token.is_empty()
+            || token.len() > MAX_BEARER_BYTES
             || !token.bytes().all(|c| c.is_ascii_graphic())
-            || token.contains(',') {
+            || token.contains(',')
+        {
             return Err(AuthError::Unauthorised);
         }
         Ok(token)
@@ -146,13 +172,19 @@ impl Authenticator {
     fn verify_claims(&self, claims: Introspection, now: i64) -> Result<Principal, AuthError> {
         if !claims.active
             || claims.iss.as_deref() != Some(self.issuer.as_str())
-            || !claims.aud.as_ref().is_some_and(|a| a.matches(&self.audience))
+            || !claims
+                .aud
+                .as_ref()
+                .is_some_and(|a| a.matches(&self.audience))
             || claims.exp.is_none_or(|exp| exp <= now)
             || claims.nbf.is_some_and(|nbf| nbf > now)
             || claims.iat.is_some_and(|iat| iat > now)
             || !claims.scope.as_deref().is_some_and(|scope| {
-                scope.split_ascii_whitespace().any(|s| s == self.required_scope)
-            }) {
+                scope
+                    .split_ascii_whitespace()
+                    .any(|s| s == self.required_scope)
+            })
+        {
             return Err(AuthError::Unauthorised);
         }
         let sub = claims.sub.ok_or(AuthError::Unauthorised)?;
@@ -164,23 +196,32 @@ impl Authenticator {
 
     pub async fn authenticate(&self, headers: &HeaderMap) -> Result<Principal, AuthError> {
         let token = self.read_bearer(headers)?;
-        let mut response = self.client.post(self.endpoint.clone())
+        let mut response = self
+            .client
+            .post(self.endpoint.clone())
             .basic_auth(&self.client_id, Some(&self.client_secret))
             .form(&[("token", token), ("token_type_hint", "access_token")])
-            .send().await.map_err(|_| AuthError::KeycloakUnavailable)?;
+            .send()
+            .await
+            .map_err(|_| AuthError::KeycloakUnavailable)?;
         if !response.status().is_success() {
             return Err(AuthError::KeycloakUnavailable);
         }
         let mut payload = Vec::new();
-        while let Some(chunk) = response.chunk().await.map_err(|_| AuthError::KeycloakUnavailable)? {
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|_| AuthError::KeycloakUnavailable)?
+        {
             if payload.len().saturating_add(chunk.len()) > MAX_INTROSPECTION_BYTES {
                 return Err(AuthError::KeycloakUnavailable);
             }
             payload.extend_from_slice(&chunk);
         }
-        let claims: Introspection = serde_json::from_slice(&payload)
-            .map_err(|_| AuthError::KeycloakUnavailable)?;
-        let now = SystemTime::now().duration_since(UNIX_EPOCH)
+        let claims: Introspection =
+            serde_json::from_slice(&payload).map_err(|_| AuthError::KeycloakUnavailable)?;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
             .map_err(|_| AuthError::KeycloakUnavailable)?
             .as_secs() as i64;
         self.verify_claims(claims, now)
@@ -208,7 +249,10 @@ mod tests {
     fn auth() -> Authenticator {
         Authenticator {
             client: Client::new(),
-            endpoint: Url::parse("https://keycloak.example/realms/postern/protocol/openid-connect/token/introspect").unwrap(),
+            endpoint: Url::parse(
+                "https://keycloak.example/realms/postern/protocol/openid-connect/token/introspect",
+            )
+            .unwrap(),
             issuer: "https://keycloak.example/realms/postern".into(),
             audience: "postern".into(),
             required_scope: "postern:use".into(),
@@ -234,9 +278,12 @@ mod tests {
     fn accepts_only_correct_keycloak_issuer_url() {
         assert!(introspection_url("https://example.com/realms/demo").is_ok());
         for url in [
-            "http://example.com/realms/demo", "https://example.com/realms/demo/",
-            "https://example.com/realms/demo?x=1", "https://user:pass@example.com/realms/demo",
-            "https://example.com/other/demo", "file:///realms/demo"
+            "http://example.com/realms/demo",
+            "https://example.com/realms/demo/",
+            "https://example.com/realms/demo?x=1",
+            "https://user:pass@example.com/realms/demo",
+            "https://example.com/other/demo",
+            "file:///realms/demo",
         ] {
             assert!(introspection_url(url).is_err(), "accepted bad issuer {url}");
         }
@@ -251,21 +298,41 @@ mod tests {
     #[test]
     fn rejects_inactive_expired_not_yet_valid_and_future_issued_tokens() {
         let a = auth();
-        let mut c = claims(1000); c.active = false; assert!(a.verify_claims(c, 1000).is_err());
-        let mut c = claims(1000); c.exp = Some(1000); assert!(a.verify_claims(c, 1000).is_err());
-        let mut c = claims(1000); c.exp = None; assert!(a.verify_claims(c, 1000).is_err());
-        let mut c = claims(1000); c.nbf = Some(1001); assert!(a.verify_claims(c, 1000).is_err());
-        let mut c = claims(1000); c.iat = Some(1001); assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.active = false;
+        assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.exp = Some(1000);
+        assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.exp = None;
+        assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.nbf = Some(1001);
+        assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.iat = Some(1001);
+        assert!(a.verify_claims(c, 1000).is_err());
     }
 
     #[test]
     fn rejects_wrong_audience_issuer_scope_or_identity() {
         let a = auth();
-        let mut c = claims(1000); c.aud = Some(Audience::One("other".into())); assert!(a.verify_claims(c, 1000).is_err());
-        let mut c = claims(1000); c.iss = Some("https://evil.example/realms/other".into()); assert!(a.verify_claims(c, 1000).is_err());
-        let mut c = claims(1000); c.scope = Some("postern:use-extra".into()); assert!(a.verify_claims(c, 1000).is_err());
-        let mut c = claims(1000); c.sub = Some("".into()); assert!(a.verify_claims(c, 1000).is_err());
-        let mut c = claims(1000); c.sub = None; assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.aud = Some(Audience::One("other".into()));
+        assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.iss = Some("https://evil.example/realms/other".into());
+        assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.scope = Some("postern:use-extra".into());
+        assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.sub = Some("".into());
+        assert!(a.verify_claims(c, 1000).is_err());
+        let mut c = claims(1000);
+        c.sub = None;
+        assert!(a.verify_claims(c, 1000).is_err());
     }
 
     #[test]

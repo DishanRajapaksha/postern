@@ -47,10 +47,19 @@ impl Config {
         );
         let mut seen = HashSet::new();
         for host in &self.hosts {
-            ensure!(host.allowed_subjects.len() <= 64, "too many allowed subjects");
+            ensure!(
+                host.allowed_subjects.len() <= 64,
+                "too many allowed subjects"
+            );
             let mut subjects = HashSet::new();
             for subject in &host.allowed_subjects {
-                ensure!(!subject.trim().is_empty() && subject == subject.trim() && subject.len() <= 256 && !subject.chars().any(char::is_control), "invalid allowed subject");
+                ensure!(
+                    !subject.trim().is_empty()
+                        && subject == subject.trim()
+                        && subject.len() <= 256
+                        && !subject.chars().any(char::is_control),
+                    "invalid allowed subject"
+                );
                 ensure!(subjects.insert(subject), "duplicate allowed subject");
             }
             let id = host.id.as_bytes();
@@ -129,7 +138,9 @@ mod tests {
             "UPPER",
             "a/b",
         ] {
-            let s = serde_json::json!({"hosts":[{"id":id,"description":"Test","allowed_subjects":[]}]}).to_string();
+            let s =
+                serde_json::json!({"hosts":[{"id":id,"description":"Test","allowed_subjects":[]}]})
+                    .to_string();
             assert!(config(&s).is_err(), "accepted invalid id: {id}");
         }
         assert!(
@@ -163,8 +174,16 @@ mod tests {
 
     #[test]
     fn refuses_unrecognised_or_duplicate_grants() {
-        assert!(config(r#"{"hosts":[{"id":"lab","description":"Lab","allowed_subjects":["same","same"]}]}"#).is_err());
-        assert!(config(r#"{"hosts":[{"id":"lab","description":"Lab","allowed_subjects":[""]}]}"#).is_err());
+        assert!(
+            config(
+                r#"{"hosts":[{"id":"lab","description":"Lab","allowed_subjects":["same","same"]}]}"#
+            )
+            .is_err()
+        );
+        assert!(
+            config(r#"{"hosts":[{"id":"lab","description":"Lab","allowed_subjects":[""]}]}"#)
+                .is_err()
+        );
         assert!(config(r#"{"hosts":[{"id":"lab","description":"Lab"}]}"#).is_err());
     }
 

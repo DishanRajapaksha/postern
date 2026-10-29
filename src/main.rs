@@ -37,7 +37,12 @@ async fn main() -> Result<()> {
     let listen = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), DEVELOPMENT_PORT);
     let auth_for_service = Arc::clone(&auth);
     let service = StreamableHttpService::new(
-        move || Ok(Postern::new(Arc::clone(&hosts), Arc::clone(&auth_for_service))),
+        move || {
+            Ok(Postern::new(
+                Arc::clone(&hosts),
+                Arc::clone(&auth_for_service),
+            ))
+        },
         LocalSessionManager::default().into(),
         // Stateless MCP. No MCP session handles can be stolen or mixed between
         // valid users. Future SSH sessions are distinct, principal-bound objects.
@@ -47,7 +52,10 @@ async fn main() -> Result<()> {
     );
     let router = Router::new()
         .nest_service("/mcp", service)
-        .layer(middleware::from_fn_with_state(Arc::clone(&auth), auth::require_auth));
+        .layer(middleware::from_fn_with_state(
+            Arc::clone(&auth),
+            auth::require_auth,
+        ));
     let listener = tokio::net::TcpListener::bind(listen).await?;
     eprintln!(
         "Postern Keycloak-authenticated MCP preview at http://{listen}/mcp; loopback ONLY, NO SSH; do not expose or tunnel it."
