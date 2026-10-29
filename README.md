@@ -4,7 +4,7 @@
 
 Postern is a proposed small, self-hosted server that lets authorised MCP clients, including ChatGPT where custom tool capabilities permit, run arbitrary shell commands on explicitly configured SSH hosts. It is designed around **session-level authorisation, unrestricted commands within the SSH account's privileges, and mandatory audit records**.
 
-> **Status: design only.** This repository currently contains the specification, not a working SSH MCP server. No SSH gateway, authentication integration or audit pipeline has been implemented or security-reviewed.
+> **Status: early development.** A read-only local MCP `hosts` tool is implemented on a feature branch. There is no SSH execution, OAuth, or audit pipeline. The preview must not be deployed publicly or treated as a working SSH gateway.
 
 ## Principles
 
@@ -45,6 +45,10 @@ The proposed default authentication provider is **Keycloak** and the preferred i
 | `audit` | Inspect permitted audit events, including incomplete and unknown outcomes. |
 
 A **persistent SSH connection is not a persistent interactive shell**. Each `exec` in the initial design starts a fresh remote shell command. Environment changes such as `cd` do not automatically carry between calls. Arbitrary scripts, pipelines and compound commands remain possible.
+
+## Development preview
+
+The first feature, a read-only `hosts()` tool and loopback-only Rust Streamable HTTP MCP server, is under development on `feat/hosts-mcp`. See [local development instructions](docs/development.md). This preview is **unauthenticated** and intentionally incapable of SSH connections, so it must never be exposed through a proxy or tunnel.
 
 ## Documentation
 

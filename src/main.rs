@@ -5,7 +5,12 @@
 mod config;
 mod mcp;
 
-use std::{env, net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path, sync::Arc};
+use std::{
+    env,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::Path,
+    sync::Arc,
+};
 
 use anyhow::{Context, Result};
 use axum::Router;
@@ -35,9 +40,13 @@ async fn main() -> Result<()> {
     );
     let router = Router::new().nest_service("/mcp", service);
     let listener = tokio::net::TcpListener::bind(listen).await?;
-    eprintln!("Postern development preview on http://{listen}/mcp; read-only, NO AUTH, loopback ONLY; never expose or tunnel it.");
+    eprintln!(
+        "Postern development preview on http://{listen}/mcp; read-only, NO AUTH, loopback ONLY; never expose or tunnel it."
+    );
     axum::serve(listener, router)
-        .with_graceful_shutdown(async { let _ = tokio::signal::ctrl_c().await; })
+        .with_graceful_shutdown(async {
+            let _ = tokio::signal::ctrl_c().await;
+        })
         .await?;
     Ok(())
 }

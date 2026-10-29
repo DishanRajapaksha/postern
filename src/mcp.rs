@@ -6,9 +6,7 @@ use std::sync::Arc;
 use rmcp::{
     ErrorData as McpError, ServerHandler,
     handler::server::router::tool::ToolRouter,
-    model::{
-        CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig,
-    },
+    model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig},
     tool, tool_handler, tool_router,
 };
 use serde::Serialize;
@@ -29,14 +27,21 @@ struct HostsResponse<'a> {
 #[tool_router]
 impl Postern {
     pub fn new(hosts: Arc<Vec<Host>>) -> Self {
-        Self { hosts, tool_router: Self::tool_router() }
+        Self {
+            hosts,
+            tool_router: Self::tool_router(),
+        }
     }
 
-    #[tool(description = "List configured Postern host IDs and public descriptions. No connection credentials or SSH operations are available.")]
+    #[tool(
+        description = "List configured Postern host IDs and public descriptions. No connection credentials or SSH operations are available."
+    )]
     async fn hosts(&self) -> Result<CallToolResult, McpError> {
-        let response = HostsResponse { hosts: self.hosts.as_slice() };
-        let json = serde_json::to_string(&response)
-            .expect("Host consists only of serialisable strings");
+        let response = HostsResponse {
+            hosts: self.hosts.as_slice(),
+        };
+        let json =
+            serde_json::to_string(&response).expect("Host consists only of serialisable strings");
         Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 }
@@ -63,9 +68,15 @@ mod tests {
 
     #[test]
     fn response_contains_only_public_fields() {
-        let hosts = vec![Host { id: "lab".into(), description: "Disposable test host".into() }];
+        let hosts = vec![Host {
+            id: "lab".into(),
+            description: "Disposable test host".into(),
+        }];
         let raw = serde_json::to_value(HostsResponse { hosts: &hosts }).unwrap();
-        assert_eq!(raw, serde_json::json!({"hosts":[{"id":"lab","description":"Disposable test host"}]}));
+        assert_eq!(
+            raw,
+            serde_json::json!({"hosts":[{"id":"lab","description":"Disposable test host"}]})
+        );
         assert!(raw.to_string().find("password").is_none());
     }
 }
