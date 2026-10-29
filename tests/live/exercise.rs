@@ -1,8 +1,5 @@
 //! Exercise the installed systemd service with credentials issued by the actual realm.
-use super::{
-    files,
-    state::{ISSUER, State},
-};
+use super::state::{ISSUER, State};
 use crate::support::client::Mcp;
 use anyhow::{Context, Result};
 use reqwest::{Client, Method};
@@ -83,17 +80,6 @@ pub async fn run(state: &State) -> Result<Vec<String>> {
             .as_array()
             .is_some_and(|v| v.len() == 1 && v[0]["name"] == "hosts")
     );
-    // Diagnostic credentials cannot inherit the owner's only host grant.
-    mcp.hosts(&tokens[0], json!({"hosts":[]})).await?;
-    files::inventory(
-        &state.owner,
-        Some((&state.diagnostics[0].subject, &state.diagnostics[1].subject)),
-    )?;
-    files::restart()?;
-    let shared = json!({"id":"diagnostic-shared","description":"Temporary shared test"});
-    tokio::try_join!(
-        mcp.hosts(&tokens[0], json!({"hosts":[{"id":"diagnostic-private","description":"Temporary private test"},shared]})),
-        mcp.hosts(&tokens[1], json!({"hosts":[shared]})),
-        mcp.hosts(&tokens[2], json!({"hosts":[]})))?;
+    super::host_probe::run(state, &tokens).await?;
     Ok(tokens)
 }
