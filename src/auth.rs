@@ -124,6 +124,10 @@ impl Authenticator {
         let client_id = required_env("POSTERN_KEYCLOAK_CLIENT_ID")?;
         let client_secret = required_env("POSTERN_KEYCLOAK_CLIENT_SECRET")?;
         let mut builder = Client::builder()
+            // Keycloak validation must contact the configured issuer directly.
+            // Do not route token introspection (and its credentials) through
+            // arbitrary HTTPS_PROXY/ALL_PROXY process environment settings.
+            .no_proxy()
             .https_only(true)
             .redirect(Policy::none())
             .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS))
