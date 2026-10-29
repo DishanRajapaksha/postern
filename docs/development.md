@@ -2,7 +2,7 @@
 
 This feature adds a real Rust MCP Streamable HTTP server with a **read-only `hosts()` tool** and **per-request Keycloak access-token introspection**.
 
-**No SSH connections, command execution, audit pipeline, public listener or OAuth discovery/login flow are implemented.** The server binds to `127.0.0.1:8765` and must not be exposed through a proxy or tunnel. A local MCP client must supply an access token obtained independently from Keycloak. This does not yet establish ChatGPT app compatibility.
+**No SSH connections, command execution, audit pipeline, public listener or verified ChatGPT OAuth login flow are implemented.** Resource discovery metadata is implemented in PR #2, but actual browser sign-in remains a separate acceptance gate. The server binds to `127.0.0.1:8765` and must not be exposed through a proxy or tunnel. A local MCP client must supply an access token obtained independently from Keycloak. The OAuth discovery metadata enables a compatible client to locate the issuer but does not establish ChatGPT app compatibility.
 
 ## Required configuration
 
@@ -23,6 +23,7 @@ Environment variables:
 | Variable | Purpose |
 | --- | --- |
 | `POSTERN_CONFIG` | Path to local JSON host inventory with subject allowlists |
+| `POSTERN_OAUTH_RESOURCE` | Canonical intended public HTTPS MCP resource URL (e.g. `https://postern.example.org/mcp`); required for discovery |
 | `POSTERN_KEYCLOAK_ISSUER` | Exact HTTPS realm URL, e.g. `https://sso.example.org/realms/postern` |
 | `POSTERN_KEYCLOAK_AUDIENCE` | Required audience, e.g. `postern` |
 | `POSTERN_KEYCLOAK_SCOPE` | Required scope, e.g. `postern:use` |
@@ -31,6 +32,8 @@ Environment variables:
 | `POSTERN_KEYCLOAK_CA_FILE` | Optional trusted PEM CA certificate for an internal Keycloak instance |
 
 The configured issuer must be an HTTPS URL ending in `/realms/<realm>` without userinfo, query or fragment. Postern derives `<issuer>/protocol/openid-connect/token/introspect` and forbids HTTP redirects. Startup fails if any mandatory variable is missing or invalid. Keycloak credentials are sent **only** to the configured HTTPS introspection endpoint, using Basic authentication and strict TLS certificate verification.
+
+See [OAuth discovery setup](oauth.md) for the anonymous metadata endpoints, precise 401 challenge, Keycloak client registration and why this still does not authorise public deployment.
 
 ## Host grants
 
@@ -102,4 +105,4 @@ The fixture includes a separate token-issuing client and verifies its token thro
 
 ## Next work
 
-OAuth resource metadata and compatible ChatGPT login flow; connection testing against Keycloak; eventual SSH profile/session support with strict host-key verification and durable audit-before-execute. No SSH privilege should be enabled until this is verified.
+A compatible ChatGPT login flow and real callback/PKCE acceptance test; eventual SSH profile/session support with strict host-key verification and durable audit-before-execute. No SSH privilege should be enabled until this is verified.
