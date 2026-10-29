@@ -203,7 +203,11 @@ impl Authenticator {
             .form(&[("token", token), ("token_type_hint", "access_token")])
             .send()
             .await
-            .map_err(|_| AuthError::KeycloakUnavailable)?;
+            .map_err(|err| {
+                #[cfg(debug_assertions)]
+                eprintln!("Keycloak HTTPS introspection transport failed: {err}");
+                AuthError::KeycloakUnavailable
+            })?;
         if !response.status().is_success() {
             return Err(AuthError::KeycloakUnavailable);
         }
