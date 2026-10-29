@@ -1,0 +1,46 @@
+{
+  "clientId": "postern-resource",
+  "enabled": true,
+  "protocol": "openid-connect",
+  "publicClient": false,
+  "standardFlowEnabled": false,
+  "directAccessGrantsEnabled": false,
+  "serviceAccountsEnabled": false,
+  "fullScopeAllowed": false,
+  "attributes": {
+    "postern.managed": "inventory-preview",
+    "access.token.lifespan": "120"
+  },
+  "protocolMappers": [
+    {
+      "name": "postern-subject",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-sub-mapper",
+      "config": {
+        "access.token.claim": "true",
+        "introspection.token.claim": "true"
+      }
+    },
+    {
+      "name": "postern-audience",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-audience-mapper",
+      "config": {
+        "included.custom.audience": "postern",
+        "access.token.claim": "true",
+        "introspection.token.claim": "true"
+      }
+    },
+    {
+      "name": "postern-introspection-audience",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-audience-mapper",
+      "config": {
+        "included.client.audience": "postern-resource",
+        "access.token.claim": "true",
+        "introspection.token.claim": "true",
+        "id.token.claim": "false"
+      }
+    }
+  ]
+}
