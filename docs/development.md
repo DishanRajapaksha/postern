@@ -6,7 +6,7 @@ This is deliberately **not yet an SSH gateway**. There is no OAuth authenticatio
 
 ## Build and run
 
-Requires a recent stable Rust toolchain supporting edition 2024 (minimum Rust 1.88).
+Requires a recent stable Rust toolchain supporting edition 2024. The exact minimum supported compiler version has not been established yet.
 
 ```sh
 cp config/postern.example.json config/postern.local.json
