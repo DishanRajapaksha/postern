@@ -25,6 +25,6 @@ Acceptance checks:
 3. A real issuer token sees exactly the five tools. Authorised test SSH commands return the non-root account identity, a durable command record and bounded output. Other principals cannot use the session or query its audit data. Revocation blocks the next operation.
 4. Automatic registration, CSRF consent, S256 and owner passkey login complete, followed by real tool calls. User confirmed this path on 2026-10-30. Repeat after relevant OAuth changes.
 5. Timeout a delayed marker, a TERM-ignoring child and a detached process group; confirm no marker appears after the original delay and that audit reports confirmed termination. Transport loss must report unknown/unconfirmed while the remote timer continues.
-5. Check Heimdall discovery, existing Leyline/Pensieve MCP and Trilium health after changes. Record source/binary/config hashes and any pending gates without secrets.
+6. Check Heimdall discovery, existing Leyline/Pensieve MCP and Trilium health after changes. Record source/binary/config hashes and any pending gates without secrets.
 
 Recovery: stop `postern.service`, restore the previously recorded private environment/config and unit, repoint `current` to the retained previous release, reload systemd and start it. Remove only the Postern gateway routes/mount if withdrawing public access, keeping all existing routes. Retain audit data; restarting invalidates sessions and marks unfinished command records unknown. Private rollback copies must remain root-only on Gont.
