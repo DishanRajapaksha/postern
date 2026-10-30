@@ -1,6 +1,10 @@
 //! Disposable real OpenSSH plus the actual authenticated MCP binary.
 #[allow(dead_code)]
 mod mock;
+#[path = "ssh/deadlines.rs"]
+mod ssh_deadlines;
+#[path = "ssh/disconnect.rs"]
+mod ssh_disconnect;
 #[path = "ssh/fixture.rs"]
 mod ssh_fixture;
 #[path = "ssh/scenarios.rs"]

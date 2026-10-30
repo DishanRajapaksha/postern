@@ -4,7 +4,7 @@
 
 Postern is a small, self-hosted server that lets authorised MCP clients, including ChatGPT where custom tool capabilities permit, run arbitrary shell commands on explicitly configured SSH hosts. It is designed around **session-level authorisation, unrestricted commands within the SSH account's privileges, and mandatory audit records**.
 
-> **Status: early development.** PR #1 added Keycloak-authenticated host discovery; This branch adds OAuth resource discovery, an opt-in public TLS proxy origin, principal-bound OpenSSH sessions and durable command auditing. Public deployment and actual ChatGPT login must be verified separately; see the branch scope report.
+> **Status: early development.** PR #1 added Keycloak-authenticated host discovery; This branch adds OAuth resource discovery, an opt-in public TLS proxy origin, principal-bound OpenSSH sessions and durable command auditing. The Gont deployment uses the existing Leyline gateway and a FastMCP OAuthProxy adapter; user-confirmed login, command execution and audit retrieval are recorded separately from backend test evidence. See the scope report.
 
 ## Principles
 
@@ -15,7 +15,7 @@ Postern is a small, self-hosted server that lets authorised MCP clients, includi
 5. **Stay small and inspectable.** Prefer one service, an explicit host allowlist, a simple HTTP MCP endpoint, standard identity verification and a local durable event store.
 6. **Be honest about the boundary.** A shell that can execute arbitrary commands can also destroy data, exfiltrate secrets and bypass application-layer command accounting. Limit its OS permissions and network reach accordingly.
 
-## Planned flow
+## Execution flow
 
 ```text
 ChatGPT / MCP client
@@ -32,7 +32,7 @@ Postern (MCP over Streamable HTTP)
        +---- SSH ----> allowlisted host, dedicated OS account
 ```
 
-The proposed default authentication provider is **Keycloak** and the preferred implementation is **Rust** using the official MCP Rust SDK, Tokio/Axum and system OpenSSH. These are design preferences, not implementation claims or immutable requirements.
+The core uses **Rust**, the official MCP Rust SDK, Tokio/Axum and system OpenSSH. Keycloak supplies identity; the public deployment uses FastMCP OAuthProxy for client-facing OAuth. Linux systemd user services enforce command deadlines on the SSH target.
 
 ## MCP tools
 

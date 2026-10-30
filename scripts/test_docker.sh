@@ -7,7 +7,7 @@ compose() { docker compose -p "$project" -f tests/integration/compose.yml "$@"; 
 cleanup() {
     result=$?
     trap - EXIT
-    if [ "$result" -ne 0 ]; then compose logs --no-color keycloak; fi
+    if [ "$result" -ne 0 ]; then compose logs --no-color keycloak integration; fi
     compose down --volumes --remove-orphans
     exit "$result"
 }
@@ -17,7 +17,13 @@ trap 'exit 143' TERM
 compose build
 compose up -d keycloak
 # Dependencies already ran; never regenerate TLS fixtures under the running issuer.
-compose run --rm --no-deps integration sh -ec '
+compose up -d integration
+compose exec -T integration sh -ec '
+    for attempt in $(seq 1 100); do
+        if systemctl show-environment >/dev/null 2>&1; then break; fi
+        sleep 0.1
+    done
+    systemctl start user@0.service
     cargo fmt --all -- --check
     cargo clippy --locked --all-targets -- -D warnings
     cargo test --locked --all-targets

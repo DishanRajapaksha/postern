@@ -60,7 +60,9 @@ pub async fn run(fixture: &Fixture) -> Result<()> {
     ensure!(timed["record"]["outcome"] == "timed_out");
     let audit = tool(&mcp, "alice", "audit", json!({})).await?;
     ensure!(audit["records"].as_array().context("audit")?.len() == 3);
+    crate::ssh_deadlines::run(fixture, &mcp, session).await?;
     crate::ssh_security::run(fixture, &mcp, session).await?;
+    crate::ssh_disconnect::run(fixture, &mcp).await?;
     // The trigger simulates storage rejecting writes while reads still work.
     let database =
         rusqlite::Connection::open(fixture.directory.path().join("audit/audit.sqlite3"))?;

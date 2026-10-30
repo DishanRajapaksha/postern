@@ -27,6 +27,15 @@ services:
     build:
       context: ../..
       dockerfile: tests/integration/Dockerfile
+    # A real cgroup manager is required for remote deadline enforcement.
+    # Privilege is confined to this disposable test container; no ports are published.
+    privileged: true
+    cgroup: host
+    command: [/lib/systemd/systemd]
+    stop_signal: SIGRTMIN+3
+    tmpfs:
+      - /run
+      - /run/lock
     # Exercise the real loopback-only binary without publishing or proxying MCP.
     network_mode: service:keycloak
     depends_on:
@@ -34,6 +43,7 @@ services:
         condition: service_started
     volumes:
       - fixtures:/fixtures:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
 volumes:
   fixtures:
   realms:

@@ -1,6 +1,7 @@
 //! A detached bounded task finalises audit even if the HTTP caller disconnects.
 mod dispatch;
 mod process;
+mod supervisor;
 use super::{
     Execution,
     types::{Execute, Record, id, now},
@@ -34,6 +35,9 @@ impl Execution {
             finished_at: None,
             outcome: "accepted".into(),
             exit_code: None,
+            timeout_seconds: Some(seconds),
+            termination_confirmed: Some(false),
+            supervisor_result: None,
             stdout_bytes: 0,
             stderr_bytes: 0,
             stdout_truncated: false,
@@ -43,9 +47,9 @@ impl Execution {
         let execution = Arc::clone(self);
         tokio::spawn(async move {
             let _permit = permit;
-            let child = dispatch::start(&execution, &session, &mut record)?;
+            let child = dispatch::start(&execution, &session, &mut record, seconds)?;
             let observed = match child {
-                Some(child) => run(child, seconds).await,
+                Some(child) => run(child, &session, &record.command_id, seconds).await,
                 None => {
                     return Ok(
                         json!({"record":record,"stdout":"","stderr":"","audit_degraded":false}),
@@ -54,16 +58,11 @@ impl Execution {
             };
             record.finished_at = Some(now());
             let (stdout, stderr) = match observed {
-                Ok((status, timed_out, out, err)) => {
-                    record.exit_code = status;
-                    record.outcome = if timed_out {
-                        "timed_out"
-                    } else if status.is_none() || status == Some(255) {
-                        "unknown"
-                    } else {
-                        "completed"
-                    }
-                    .into();
+                Ok((observed, out, err)) => {
+                    record.exit_code = observed.exit_code;
+                    record.outcome = observed.outcome.into();
+                    record.termination_confirmed = Some(true);
+                    record.supervisor_result = Some(observed.result);
                     record.stdout_bytes = out.bytes;
                     record.stderr_bytes = err.bytes;
                     record.stdout_truncated = out.truncated;
