@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
     // Fail startup unless the Keycloak issuer, audience, client and required
     // scope are configured. Never fall back to anonymous or 'dev' credentials.
     let auth = Arc::new(Authenticator::from_environment()?);
-    let execution = execution::Execution::from_environment(config_path.clone().into())?;
+    let execution = execution::Execution::from_environment(config_path.clone().into()).await?;
     let discovery = Arc::clone(&auth.discovery);
     let hosts = Arc::new(config.hosts);
 

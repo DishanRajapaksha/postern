@@ -4,7 +4,7 @@
 
 Postern is a small, self-hosted server that lets authorised MCP clients, including ChatGPT where custom tool capabilities permit, run arbitrary shell commands on explicitly configured SSH hosts. It is designed around **session-level authorisation, unrestricted commands within the SSH account's privileges, and mandatory audit records**.
 
-> **Status: early development.** PR #1 added Keycloak-authenticated host discovery; This branch adds OAuth resource discovery, an opt-in public TLS proxy origin, principal-bound OpenSSH sessions and durable command auditing. The Gont deployment uses the existing Leyline gateway and a FastMCP OAuthProxy adapter; user-confirmed login, command execution and audit retrieval are recorded separately from backend test evidence. See the scope report.
+> **Status: early development, updated 2026-10-30.** Merged PRs #1–#3 implement Keycloak-authenticated host discovery, OAuth resource discovery, opt-in public gateway access, principal-bound OpenSSH sessions, durable audit and target-side systemd command deadlines. The Gont records confirm OAuthProxy login, user command/audit operations and native non-root supervision tests. The user confirmed the connector timeout fix for the reproduced command; broader connector child-process/cancellation-race tests and comparison with the local native benchmark remain open. See the [connector regression report](docs/connector-regression.md). See the [current scope](docs/branch-scope.md), [roadmap](docs/roadmap.md) and [deployment evidence](deploy/gont/verification.json); broader production acceptance remains incomplete.
 
 ## Principles
 
@@ -61,8 +61,9 @@ The default configuration exposes only `hosts()` on loopback. Explicit execution
 - [Engineering rules and 100-line source limit](CONTRIBUTING.md)
 - [Audit model](docs/auditing.md)
 - [Deployment and configuration design](docs/operations.md)
+- [Audit backup, recovery and incident procedures](docs/recovery.md)
 - [Implementation and verification plan](docs/roadmap.md)
-- [Current branch scope and Docker verification](docs/branch-scope.md)
+- [Current implementation scope and verification](docs/branch-scope.md)
 - [ADR 0001: session-authorised, unrestricted execution](docs/adr/0001-session-authorised-execution.md)
 
 ## Project boundaries

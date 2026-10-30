@@ -5,13 +5,14 @@ edition = "2024"
 rust-version = "1.93"
 description = "Auditable SSH gateway for MCP clients (early development)"
 publish = false
+default-run = "postern"
 
 [dependencies]
 anyhow = "1"
 axum = "0.8"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 rmcp = { version = "=3.8.0", features = ["server", "macros", "schemars", "transport-streamable-http-server"] }
-rusqlite = { version = "0.41.1", features = ["bundled"] }
+rusqlite = { version = "0.41.1", features = ["bundled", "backup"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tempfile = "3"

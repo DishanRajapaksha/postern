@@ -67,7 +67,7 @@ POSTERN_CONFIG=config/postern.local.json cargo run --locked
 
 Endpoint: `http://127.0.0.1:8765/mcp` **on the same machine only**. The localhost MCP transport is not TLS because it must never leave the machine; the Keycloak introspection connection uses verified HTTPS.
 
-Every MCP HTTP request (including initialise, tool discovery, tools and unsupported GET/DELETE operations) must have `Authorization: Bearer <access-token>`. Requests without a valid, currently active token are denied before MCP processing. The MCP transport operates **statelessly**: no `Mcp-Session-Id` can be used to inherit an earlier caller's authorisation. This is separate from the principal-bound SSH execution sessions planned later.
+Every MCP HTTP request (including initialise, tool discovery, tools and unsupported GET/DELETE operations) must have `Authorization: Bearer <access-token>`. Requests without a valid, currently active token are denied before MCP processing. The MCP transport operates **statelessly**: no `Mcp-Session-Id` can be used to inherit an earlier caller's authorisation. This is separate from the principal-bound SSH execution sessions available in opt-in execution mode.
 
 ## Tests
 
@@ -89,7 +89,7 @@ sh scripts/test_docker.sh
 
 No local Rust or OpenSSL installation is required. The runner builds the branch with Rust 1.93 and runs formatting, Clippy, unit tests and native Rust integration tests, then exercises a disposable **Keycloak 26.8.1** realm over verified HTTPS. First use downloads the images and Rust dependencies. There is no Python harness or Python runtime requirement.
 
-All handwritten code/configuration files stay within 100 lines; generated Cargo.lock and Markdown documentation are excluded. HTTP clients must use an allowed local Host and, when sending Origin, the matching local origin. Requests are limited to 16 KiB and 15 seconds, with 32 admitted requests at a time. See [hardening](hardening.md) for exact behavior and limits.
+All handwritten code/configuration files stay within 100 lines; generated Cargo.lock and Markdown documentation are excluded. HTTP clients must use an allowed local Host and, when sending Origin, the matching local origin. Bodies are limited to 16 KiB with a 15-second read deadline and 32 admitted requests at a time. The overall handler deadline is 15 seconds in inventory mode and 75 seconds with execution enabled. See [hardening](hardening.md) for exact behavior and limits.
 
 The suite generates a temporary CA and signed server certificate, imports three test users and confidential clients with explicit subject/audience mappers, and tests real access tokens through MCP initialisation, tool discovery and calls. It checks exact host grants and response fields, empty visibility for an ungranted user, alternating and concurrent callers, rejection of duplicate credentials, fabricated session handles, refresh tokens, missing scope, wrong audience, expired access tokens and access tokens after Keycloak logout. It also verifies the actual loopback bind, absence of MCP session response headers, absence of SSH/audit tools, failure on invalid startup configuration, and HTTP 503 for untrusted TLS, bad introspection credentials and an unreachable issuer. Unusable ambient proxy settings exercise direct issuer connections. The mock suite additionally checks malformed/oversized responses, refusal to follow redirects, revocation between the HTTP gate and tool dispatch and exactly two introspections for a successful `hosts` call.
 
@@ -101,11 +101,11 @@ Compose runs `cargo test --locked --test fixtures -- --ignored` in its init cont
 
 The fixture includes a separate token-issuing client and verifies its token through the configured introspection client. The Compose runner does not restart dependencies during test execution, preventing certificate regeneration under a running issuer on older Compose versions.
 
-**Before external deployment:** test against an actual configured Keycloak realm and the user's actual ChatGPT MCP integration, including the OAuth discovery/authorisation flow; implement TLS/public endpoint hardening and bind any future SSH sessions to verified principals. Unit and mock tests alone do not establish production security.
+**Before a new external deployment:** repeat real issuer, public TLS/OAuth, principal-bound SSH and actual client acceptance for that configuration. The Gont records confirm login and command/audit use, with the connector timeout fix confirmed by the user for the reproduced command; child-process/cancellation-race coverage remains open. Unit and mock tests alone do not establish production security.
 
 ## Next work
 
-Repeat public owner login/tool acceptance and controlled non-root Gont checks after relevant changes. Privileged production accounts, host activity auditing and off-host audit replication remain separate work.
+Extend connector regression coverage to child processes and cancellation races, compare native measurements with the public adapter/connector path, and repeat recovery drills on the deployed service. See the [user-reported connector results](connector-regression.md) and [local backup/recovery, storage and benchmark evidence](local-verification.md). Repeat public owner login/tool acceptance and controlled non-root Gont checks after relevant changes. See the [roadmap](roadmap.md) for open gates; privileged accounts, host activity auditing and off-host audit replication remain separate work.
 
 ## Optional public gateway and SSH
 

@@ -2,7 +2,7 @@
 
 Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
 
-Status: **Proposed specification**, 29 October 2026. The implemented subset and remaining gates are tracked in the branch scope report.
+Status: requirements baseline, reconciled on **2026-10-30**. This is broader than the shipped implementation: admin-wide audit access and operational failure drills remain open. See [current scope](branch-scope.md), [execution semantics](execution.md) and the [roadmap](roadmap.md) for implemented behavior and recorded acceptance.
 
 ## Purpose
 
@@ -80,8 +80,8 @@ The user has explicitly requested **unrestricted commands and auditing**, with n
 
 ## Unresolved choices
 
-- Which ChatGPT integration route exposes unrestricted write-capable custom MCP tools for the user's account? **Must be tested before implementation is claimed compatible.**
+- The owner confirmed OAuthProxy login and command/audit operations through the actual integration on 2026-10-30. The user subsequently confirmed the connector timeout fix for the reproduced command; broader connector child-process/cancellation-race coverage and comparison with the [local native benchmark](local-verification.md) remain open. See the [connector report](connector-regression.md); client confirmations and restrictions remain outside Postern's control.
 - Exact production host list, per-host account privileges, Keycloak realm/client configuration and how the gateway reaches Tailscale hosts.
-- Whether audit command stdout/stderr should be stored at all, given potential secrets.
-- Session/command quotas and timeouts: choose via testing rather than treating sample values as guarantees.
+- Current policy stores exact command text and outcome metadata without stdout/stderr bodies. Any future output retention requires a separate privacy and storage decision.
+- Current session/command limits are documented in [execution](execution.md). Review their capacity and suitability before expanding deployment; illustrative values elsewhere are not configuration guarantees.
 - Whether to require off-host audit forwarding at initial launch or as a production hardening gate.

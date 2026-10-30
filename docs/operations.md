@@ -2,7 +2,7 @@
 
 Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
 
-Status: **proposed**; examples are illustrative and **not working configuration** until a schema is implemented.
+Status as of **2026-10-30**: operational requirements and illustrative design examples. A working Gont deployment is recorded in the [deployment runbook](../deploy/gont/README.md) and [verification record](../deploy/gont/verification.json). Use [development](development.md) and [execution](execution.md) for supported settings; the YAML below is not accepted by the executable. The [recovery runbook](recovery.md) describes SQLite-aware backup/restore, rotation and incident procedures. Deployment drills and monitoring remain open in the [roadmap](roadmap.md).
 
 ## Expected deployment
 
@@ -90,4 +90,4 @@ Document commands to invalidate every session, disable a host profile, revoke a 
 
 The first feature branch implements per-request Keycloak **HTTPS introspection**, without caching, and an explicit `allowed_subjects` inventory policy. See [development.md](development.md) for actual supported settings and a loopback-only setup. The YAML example above remains a future design sketch and is **not** accepted by the current executable.
 
-The default inventory mode is local. The explicit public proxy and audited SSH mode is documented in the Gont runbook; only that reviewed configuration should be routed publicly. Actual ChatGPT login is tracked as its own acceptance gate. Every MCP HTTP request is authenticated through Keycloak even when it only initialises or lists tools; `hosts()` rechecks the token before applying the subject-specific allowlist. Upstream identity failures deny requests, rather than using cached identities.
+The default inventory mode is local. The explicit public proxy and audited SSH mode is documented in the Gont runbook; only that reviewed configuration should be routed publicly. User-confirmed ChatGPT login and command/audit use are recorded for Gont; the subsequent [connector report](connector-regression.md) confirms the reproduced timeout fix, with connector child-process/cancellation-race coverage and comparison with the [local native benchmark](local-verification.md) still open. Every MCP HTTP request is authenticated through Keycloak even when it only initialises or lists tools; Every tool rechecks the token and requires the same principal as HTTP admission; `hosts()` then applies the subject-specific allowlist. Upstream identity failures deny requests, rather than using cached identities.
