@@ -10,8 +10,11 @@ pub async fn check(
 ) -> Result<Value> {
     ensure!(
         response.status().as_u16() == status,
-        "{method}: expected {status}, received {}",
-        response.status()
+        "{method}: expected {status}, received {}; content-type={:?}, cf-mitigated={:?}, content-length={:?}",
+        response.status(),
+        response.headers().get("content-type"),
+        response.headers().get("cf-mitigated"),
+        response.headers().get("content-length")
     );
     ensure!(
         response.headers().get("mcp-session-id").is_none(),

@@ -15,7 +15,7 @@ use std::{env, path::Path, sync::Arc};
 use anyhow::{Context, Result};
 use axum::{Router, middleware};
 use rmcp::transport::streamable_http_server::{
-    StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
+    StreamableHttpService, session::local::LocalSessionManager,
 };
 
 use crate::{auth::Authenticator, config::Config, mcp::Postern};
@@ -46,9 +46,7 @@ async fn main() -> Result<()> {
         LocalSessionManager::default().into(),
         // Stateless MCP. No MCP session handles can be stolen or mixed between
         // valid users. SSH sessions are distinct, principal-bound objects.
-        StreamableHttpServerConfig::default()
-            .with_legacy_session_mode(false)
-            .with_json_response(true),
+        limits.mcp_config(),
     );
     let protected =
         Router::new()

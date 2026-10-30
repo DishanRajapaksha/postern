@@ -16,6 +16,18 @@ pub async fn run(fixture: &Fixture, mcp: &Mcp, session: &str) -> Result<()> {
         response.status() == 200,
         "public Host through private socket rejected"
     );
+    let authenticated = socket
+        .post("http://postern.example/mcp")
+        .bearer_auth("alice")
+        .header("accept", "application/json, text/event-stream")
+        .header("origin", "https://postern.example")
+        .json(&json!({"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}))
+        .send()
+        .await?;
+    ensure!(
+        authenticated.status() == 200,
+        "SDK rejected configured public Host"
+    );
     ensure!(
         socket
             .post("http://postern.example/mcp")
