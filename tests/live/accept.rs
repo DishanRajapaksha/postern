@@ -4,12 +4,12 @@ use super::{
     exercise, files,
     state::{ROOT, State},
 };
-use crate::support::client::Mcp;
 use anyhow::{Context, Result, ensure};
 use reqwest::Method;
 use serde_json::{Value, json};
 
 pub async fn run() -> Result<()> {
+    let mcp = super::environment::mcp()?;
     let state: State = serde_json::from_slice(&std::fs::read(format!(
         "{ROOT}/private/verification-state.json"
     ))?)?;
@@ -51,9 +51,7 @@ pub async fn run() -> Result<()> {
             == state.browser_flow
     );
     for token in &tokens {
-        Mcp::new()?
-            .call(token, "tools/list", json!({}), 401)
-            .await?;
+        mcp.call(token, "tools/list", json!({}), 401).await?;
     }
     std::fs::remove_file(format!("{ROOT}/private/verification-state.json"))?;
     println!(

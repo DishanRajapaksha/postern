@@ -2,7 +2,7 @@
 
 This feature adds a real Rust MCP Streamable HTTP server with a **read-only `hosts()` tool** and **per-request Keycloak access-token introspection**.
 
-**No SSH connections, command execution, audit pipeline, public listener or OAuth discovery/login flow are implemented.** The server binds to `127.0.0.1:8765` and must not be exposed through a proxy or tunnel. A local MCP client must supply an access token obtained independently from Keycloak. This does not yet establish ChatGPT app compatibility.
+The default is inventory-only with a loopback listener. **Opt-in audited SSH execution and an explicit public TLS gateway mode are implemented**; see [execution](execution.md) and [Gont deployment](../deploy/gont/README.md). A verified ChatGPT callback/PKCE/passkey round-trip remains a separate acceptance gate. Never forward the default development endpoint without configuring and validating the public mode. Local clients can supply an independently obtained Keycloak token; discovery also advertises the issuer to OAuth clients.
 
 ## Required configuration
 
@@ -23,6 +23,7 @@ Environment variables:
 | Variable | Purpose |
 | --- | --- |
 | `POSTERN_CONFIG` | Path to local JSON host inventory with subject allowlists |
+| `POSTERN_OAUTH_RESOURCE` | Canonical intended public HTTPS MCP resource URL (e.g. `https://postern.example.org/mcp`); required for discovery |
 | `POSTERN_KEYCLOAK_ISSUER` | Exact HTTPS realm URL, e.g. `https://sso.example.org/realms/postern` |
 | `POSTERN_KEYCLOAK_AUDIENCE` | Required audience, e.g. `postern` |
 | `POSTERN_KEYCLOAK_SCOPE` | Required scope, e.g. `postern:use` |
@@ -31,6 +32,8 @@ Environment variables:
 | `POSTERN_KEYCLOAK_CA_FILE` | Optional trusted PEM CA certificate for an internal Keycloak instance |
 
 The configured issuer must be an HTTPS URL ending in `/realms/<realm>` without userinfo, query or fragment. Postern derives `<issuer>/protocol/openid-connect/token/introspect` and forbids HTTP redirects. Startup fails if any mandatory variable is missing or invalid. Keycloak credentials are sent **only** to the configured HTTPS introspection endpoint, using Basic authentication and strict TLS certificate verification.
+
+See [OAuth discovery setup](oauth.md) for the anonymous metadata endpoints, precise 401 challenge, Keycloak client registration and why this still does not authorise public deployment.
 
 ## Host grants
 
@@ -64,7 +67,7 @@ POSTERN_CONFIG=config/postern.local.json cargo run --locked
 
 Endpoint: `http://127.0.0.1:8765/mcp` **on the same machine only**. The localhost MCP transport is not TLS because it must never leave the machine; the Keycloak introspection connection uses verified HTTPS.
 
-Every HTTP request (including initialise, discovery, tools and unsupported GET/DELETE operations) must have `Authorization: Bearer <access-token>`. Requests without a valid, currently active token are denied before MCP processing. The MCP transport operates **statelessly**: no `Mcp-Session-Id` can be used to inherit an earlier caller's authorisation. This is separate from the principal-bound SSH execution sessions planned later.
+Every MCP HTTP request (including initialise, tool discovery, tools and unsupported GET/DELETE operations) must have `Authorization: Bearer <access-token>`. Requests without a valid, currently active token are denied before MCP processing. The MCP transport operates **statelessly**: no `Mcp-Session-Id` can be used to inherit an earlier caller's authorisation. This is separate from the principal-bound SSH execution sessions planned later.
 
 ## Tests
 
@@ -102,4 +105,8 @@ The fixture includes a separate token-issuing client and verifies its token thro
 
 ## Next work
 
-OAuth resource metadata and compatible ChatGPT login flow; connection testing against Keycloak; eventual SSH profile/session support with strict host-key verification and durable audit-before-execute. No SSH privilege should be enabled until this is verified.
+Complete the actual ChatGPT callback/PKCE/passkey acceptance test and controlled non-root Gont deployment checks. Privileged production accounts, host activity auditing and off-host audit replication remain separate work.
+
+## Optional public gateway and SSH
+
+The inventory-only defaults above remain available. See [execution configuration](execution.md) and [Gont deployment](../deploy/gont/README.md) for the explicit public proxy and execution settings. The Docker runner now also tests real OpenSSH, host-key rejection, output/timeout bounds, isolation and audit-before-dispatch failure.

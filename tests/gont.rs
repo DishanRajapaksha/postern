@@ -25,3 +25,15 @@ async fn diagnose_gont_claims() -> anyhow::Result<()> {
 async fn prepare_gont_diagnostics() -> anyhow::Result<()> {
     live::setup::diagnostics().await
 }
+
+#[tokio::test]
+#[ignore = "configures only the dedicated Postern OAuth login client on Gont"]
+async fn configure_gont_public_client() -> anyhow::Result<()> {
+    live::public::configure().await
+}
+
+#[tokio::test]
+#[ignore = "exercises public audited SSH on Gont and removes diagnostic grants/client"]
+async fn verify_gont_public_execution() -> anyhow::Result<()> {
+    live::public_accept::run().await
+}

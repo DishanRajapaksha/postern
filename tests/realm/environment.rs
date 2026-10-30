@@ -7,6 +7,7 @@ pub fn configured() -> Environment {
         ("POSTERN_CONFIG", "/fixtures/hosts.json"),
         ("POSTERN_KEYCLOAK_ISSUER", ISSUER),
         ("POSTERN_KEYCLOAK_AUDIENCE", "postern"),
+        ("POSTERN_OAUTH_RESOURCE", "https://postern.example/mcp"),
         ("POSTERN_KEYCLOAK_SCOPE", "postern:use"),
         ("POSTERN_KEYCLOAK_CLIENT_ID", "postern-test"),
         ("POSTERN_KEYCLOAK_CLIENT_SECRET", SECRET),

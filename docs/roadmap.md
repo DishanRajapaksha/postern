@@ -1,6 +1,8 @@
 # Implementation and verification plan
 
-Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 21 unit tests, mock MCP HTTP tests and Docker integration against disposable Keycloak passing locally on 2026-10-29. See [branch scope validation](branch-scope.md) and [security hardening](hardening.md). No authenticated public endpoint, OAuth discovery, SSH execution, sessions or auditing yet.
+Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
+
+Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 21 unit tests, mock MCP HTTP tests and Docker integration against disposable Keycloak passing locally on 2026-10-29. See [branch scope validation](branch-scope.md) and [security hardening](hardening.md). The expanded branch implements public proxy support, SSH sessions/execution and auditing; live deployment and ChatGPT login require the separate acceptance record.
 
 ## First implementation slice: read-only local MCP inventory (2026-10-29)
 
@@ -11,7 +13,8 @@ Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory dev
 - [x] Commit dependency lockfile, enforce locked builds and declare/test Rust 1.93 as the minimum toolchain.
 - [x] Keycloak introspection gate on every HTTP request, stateless MCP, subject-scoped host visibility and deny-by-default policy (verified against disposable real Keycloak; live user integration remains outstanding).
 - [x] Docker integration with real Keycloak over verified HTTPS, including concurrent subject isolation, expiry, logout revocation and fail-closed authentication errors; CI job added.
-- [ ] Implement OAuth discovery/authorisation flow for the actual ChatGPT connector, verify real Keycloak credentials and live integration before public exposure or SSH execution.
+- [x] Implement RFC 9728 OAuth protected-resource metadata and 401 discovery challenges (PR #2, still in review).
+- [ ] Configure/verify real ChatGPT OAuth client registration and login through Keycloak, including PKCE S256, resource/audience binding and final public HTTPS integration, before SSH execution.
 
 This slice does **not** satisfy the Phase 0 ChatGPT integration gate or the Phase 1 SSH execution milestone.
 
@@ -27,23 +30,23 @@ This slice does **not** satisfy the Phase 0 ChatGPT integration gate or the Phas
 
 ## Phase 1: minimal end-to-end implementation
 
-- [ ] Rust project layout, locked dependencies, formatting/lint/test pipeline.
-- [ ] Streamable HTTP MCP with `hosts`, `open_session`, `exec`, `close_session`, `audit` tools.
-- [ ] Explicit configured SSH target allowlist and key paths; system OpenSSH launcher with strict pinned host verification.
-- [ ] Session registry with actor ownership, deadlines and safe connection-multiplexing socket management.
-- [ ] SQLite audit schema and transactional intent write **before** spawn, bounded output capture and final status writes.
-- [ ] No shell-content filtering or per-command policy layer.
-- [ ] Integration tests using disposable SSH targets, including intentional non-zero exits and complex shell scripts.
+- [x] Rust project layout, locked dependencies, formatting/lint/test pipeline.
+- [x] Streamable HTTP MCP with `hosts`, `open_session`, `exec`, `close_session`, `audit` tools.
+- [x] Explicit configured SSH target allowlist and key paths; system OpenSSH launcher with strict pinned host verification.
+- [x] Session registry with actor ownership, deadlines and safe connection-multiplexing socket management.
+- [x] SQLite audit schema and transactional intent write **before** spawn, bounded output capture and final status writes.
+- [x] No shell-content filtering or per-command policy layer.
+- [x] Integration tests using disposable SSH targets, including intentional non-zero exits and complex shell scripts.
 
 **Gate:** one authenticated test principal can execute a command on an authorised test host with a verified audit record.
 
 ## Phase 2: close security and failure gaps
 
 - [ ] Keycloak issuer/audience/signature/expiry/scope validation on every request.
-- [ ] Per-principal host authorisation and cross-user session/audit isolation.
+- [x] Per-principal host authorisation and cross-user session/audit isolation.
 - [ ] Audit-database unavailable-before-dispatch test; crash injection at every state transition.
 - [ ] Output size, timeout, cancellation and simultaneous invocation tests.
-- [ ] Strict host-key mismatch tests and credential/path/SSH option injection tests.
+- [x] Strict host-key mismatch tests and credential/path/SSH option injection tests.
 - [ ] Session expiry, restart cleanup and revocation tests.
 - [ ] Static security checks, dependency vulnerability scanning and minimal privilege deployment.
 
@@ -51,7 +54,7 @@ This slice does **not** satisfy the Phase 0 ChatGPT integration gate or the Phas
 
 ## Phase 3: operational hardening
 
-- [ ] systemd unit and installation documentation with safe directory permissions.
+- [x] systemd unit and installation documentation with safe directory permissions.
 - [ ] Keycloak integration guide, reverse proxy/TLS examples and private/Tailscale target routing.
 - [ ] Metrics, health checks, audit retention and backups.
 - [ ] Off-host audit replication and detection of replication lag; decide whether production requires it.
@@ -96,3 +99,7 @@ postern/
 - No retries of side-effecting command execution without a designed idempotency protocol.
 - Every command accepted produces a unique command ID, but a crash may make its final remote outcome **unknown**.
 - Parsing/classifying commands is outside the product: acceptance tests include arbitrary shells and scripts against a throwaway machine.
+
+## Controlled public/non-root acceptance on 2026-10-30
+
+The public endpoint, real issuer tokens, five-tool inventory, non-root Gont SSH, durable audit, diagnostic cleanup and immediate revocation passed live. The account has no sudo permission. The exact ChatGPT callback, owner passkey login and ChatGPT-originated tool call are pending. See the deployment verification JSON for revision-specific test evidence; this does not complete the broader production/privileged-account gates.

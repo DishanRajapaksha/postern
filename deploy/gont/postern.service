@@ -1,6 +1,6 @@
-# Read-only preview: a dedicated account, no SSH keys and no public routing.
+# Gateway remains unprivileged; SSH credentials select a separate target account.
 [Unit]
-Description=Postern authenticated local MCP inventory
+Description=Postern authenticated audited MCP SSH gateway
 Wants=network-online.target
 After=network-online.target
 StartLimitIntervalSec=60
@@ -20,6 +20,7 @@ NoNewPrivileges=yes
 CapabilityBoundingSet=
 AmbientCapabilities=
 ProtectSystem=strict
+ReadWritePaths=/srv/services/postern/audit /srv/services/postern/run /srv/services/postern/proxy
 ProtectHome=yes
 PrivateTmp=yes
 PrivateDevices=yes

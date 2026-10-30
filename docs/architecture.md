@@ -1,5 +1,7 @@
 # Architecture and execution lifecycle
 
+Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
+
 Status: **proposed**. Precise implementation interfaces remain open.
 
 ## Trust boundaries

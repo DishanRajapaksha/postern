@@ -1,6 +1,8 @@
 # Implemented security controls
 
-This document describes the current read-only preview, not a security certification or production deployment approval.
+Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
+
+This document describes the inventory foundation; additional public and SSH controls are documented in execution.md, not a security certification or production deployment approval.
 
 | Boundary | Enforced behavior |
 | --- | --- |

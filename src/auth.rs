@@ -9,6 +9,7 @@ mod settings;
 mod tests;
 mod transport;
 
+use crate::oauth::Discovery;
 use axum::http::HeaderMap;
 pub(crate) use middleware::require_auth;
 use reqwest::Client;
@@ -27,6 +28,7 @@ pub(crate) struct Authenticator {
     client: Client,
     settings: Settings,
     permits: Arc<Semaphore>,
+    pub(crate) discovery: Arc<Discovery>,
 }
 
 #[derive(Debug)]
@@ -39,10 +41,15 @@ impl Authenticator {
     pub(crate) fn from_environment() -> anyhow::Result<Self> {
         let settings = Settings::from_environment()?;
         let client = transport::client()?;
+        let discovery = Arc::new(Discovery::from_environment(
+            &settings.issuer,
+            &settings.required_scope,
+        )?);
         Ok(Self {
             client,
             settings,
             permits: Arc::new(Semaphore::new(32)),
+            discovery,
         })
     }
 

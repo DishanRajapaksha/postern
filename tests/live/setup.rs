@@ -9,6 +9,7 @@ use reqwest::Method;
 use serde_json::json;
 
 pub async fn run() -> Result<()> {
+    let oauth_resource = super::environment::resource()?;
     let admin = Admin::new().await?;
     let realm = admin.get("").await?;
     let browser_flow = realm["browserFlow"]
@@ -53,7 +54,7 @@ pub async fn run() -> Result<()> {
     let scope_id = scope["id"].as_str().context("missing scope ID")?;
     let resource = clients::create(&admin, "postern-resource", false).await?;
     let secret = clients::secret(&admin, &resource).await?;
-    files::private("environment", format!("POSTERN_CONFIG=/srv/services/postern/config/hosts.json\nPOSTERN_KEYCLOAK_ISSUER={ISSUER}\nPOSTERN_KEYCLOAK_AUDIENCE=postern\nPOSTERN_KEYCLOAK_SCOPE=postern:use\nPOSTERN_KEYCLOAK_CLIENT_ID=postern-resource\nPOSTERN_KEYCLOAK_CLIENT_SECRET={secret}\n").as_bytes())?;
+    files::private("environment", format!("POSTERN_CONFIG=/srv/services/postern/config/hosts.json\nPOSTERN_OAUTH_RESOURCE={oauth_resource}\nPOSTERN_KEYCLOAK_ISSUER={ISSUER}\nPOSTERN_KEYCLOAK_AUDIENCE=postern\nPOSTERN_KEYCLOAK_SCOPE=postern:use\nPOSTERN_KEYCLOAK_CLIENT_ID=postern-resource\nPOSTERN_KEYCLOAK_CLIENT_SECRET={secret}\n").as_bytes())?;
     let mut state = State {
         owner,
         browser_flow,

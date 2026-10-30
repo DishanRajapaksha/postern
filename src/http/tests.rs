@@ -59,3 +59,16 @@ fn duplicate_headers_cannot_choose_a_more_permissive_origin() {
     headers.append("host", "localhost:8765".parse().unwrap());
     assert!(!super::origin::allowed(&headers));
 }
+
+#[test]
+fn public_origin_must_match_explicit_configuration() {
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert("host", "leyline.example".parse().unwrap());
+    headers.insert("origin", "https://leyline.example".parse().unwrap());
+    let public = Some("https://leyline.example");
+    assert!(super::origin::allowed_public(&headers, public));
+    assert!(!super::origin::allowed_public(&headers, None));
+    headers.insert("origin", "https://attacker.example".parse().unwrap());
+    headers.insert("x-forwarded-host", "leyline.example".parse().unwrap());
+    assert!(!super::origin::allowed_public(&headers, public));
+}

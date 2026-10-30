@@ -2,11 +2,19 @@
 use anyhow::{Result, ensure};
 use serde_json::Value;
 
-pub async fn check(response: reqwest::Response, status: u16, method: &str) -> Result<Value> {
+pub async fn check(
+    response: reqwest::Response,
+    status: u16,
+    method: &str,
+    challenge: &str,
+) -> Result<Value> {
     ensure!(
         response.status().as_u16() == status,
-        "{method}: expected {status}, received {}",
-        response.status()
+        "{method}: expected {status}, received {}; content-type={:?}, cf-mitigated={:?}, content-length={:?}",
+        response.status(),
+        response.headers().get("content-type"),
+        response.headers().get("cf-mitigated"),
+        response.headers().get("content-length")
     );
     ensure!(
         response.headers().get("mcp-session-id").is_none(),
@@ -29,7 +37,7 @@ pub async fn check(response: reqwest::Response, status: u16, method: &str) -> Re
             response
                 .headers()
                 .get("www-authenticate")
-                .is_some_and(|v| v == "Bearer")
+                .is_some_and(|v| v == challenge)
         );
     }
     if status != 200 {

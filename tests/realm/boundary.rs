@@ -60,13 +60,16 @@ pub async fn run(mcp: &Mcp, access: &str) -> Result<()> {
 fn chunked() -> Result<()> {
     let mut socket = std::net::TcpStream::connect("127.0.0.1:8765")?;
     socket.set_read_timeout(Some(std::time::Duration::from_secs(10)))?;
-    socket.write_all(b"POST /mcp HTTP/1.1\r\nHost: 127.0.0.1:8765\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n")?;
-    for _ in 0..3 {
-        socket.write_all(b"2000\r\n")?;
-        socket.write_all(&vec![b'x'; 8192])?;
-        socket.write_all(b"\r\n")?;
+    let mut request = b"POST /mcp HTTP/1.1\r\nHost: 127.0.0.1:8765\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n".to_vec();
+    for _ in 0..2 {
+        request.extend_from_slice(b"2000\r\n");
+        request.extend_from_slice(&[b'x'; 8192]);
+        request.extend_from_slice(b"\r\n");
     }
-    socket.write_all(b"0\r\n\r\n")?;
+    // Cross the limit by one byte and send once. Extra writes after the server's
+    // valid early 413 raced connection closure and falsely failed with EPIPE.
+    request.extend_from_slice(b"1\r\nx\r\n0\r\n\r\n");
+    socket.write_all(&request)?;
     let mut response = String::new();
     BufReader::new(socket).read_line(&mut response)?;
     ensure!(response.starts_with("HTTP/1.1 413"));

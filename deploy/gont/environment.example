@@ -1,8 +1,13 @@
 # Template only. Store the populated file on Gont as root:root, mode 0600.
 # Issued tokens need audiences postern AND postern-resource on Keycloak 26.6.2+.
 POSTERN_CONFIG=/srv/services/postern/config/hosts.json
+# Required intended HTTPS identity; does not publish a route or change the bind.
+POSTERN_OAUTH_RESOURCE=https://leyline.talesfrom.earth/postern
+POSTERN_PUBLIC_PROXY=true
+POSTERN_PROXY_SOCKET=/srv/services/postern/proxy/http.sock
+POSTERN_EXECUTION_CONFIG=/srv/services/postern/config/execution.json
 POSTERN_KEYCLOAK_ISSUER=https://heimdall.talesfrom.earth/keycloak/realms/gont
-POSTERN_KEYCLOAK_AUDIENCE=postern
+POSTERN_KEYCLOAK_AUDIENCE=https://leyline.talesfrom.earth/postern
 POSTERN_KEYCLOAK_SCOPE=postern:use
 POSTERN_KEYCLOAK_CLIENT_ID=postern-resource
 POSTERN_KEYCLOAK_CLIENT_SECRET=REPLACE_ON_GONT_ONLY

@@ -22,4 +22,5 @@ compose run --rm --no-deps integration sh -ec '
     cargo clippy --locked --all-targets -- -D warnings
     cargo test --locked --all-targets
     cargo test --locked --test keycloak -- --ignored --nocapture
+    cargo test --locked --test ssh -- --ignored --nocapture
 '

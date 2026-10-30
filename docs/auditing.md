@@ -1,5 +1,7 @@
 # Audit design
 
+Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
+
 Status: proposed. **Postern must account for every MCP command request it accepts**, while recognising that an arbitrary remote shell may perform more operations than any one request reveals.
 
 ## Two different meanings of "every command"

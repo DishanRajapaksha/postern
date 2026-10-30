@@ -1,28 +1,24 @@
-//! Postern authenticated read-only MCP development server.
+//! Postern authenticated MCP inventory and opt-in audited SSH gateway.
 //! Host discovery is gated on fresh Keycloak introspection on every request.
-//! Until TLS/OAuth client discovery and SSH auditing are implemented, loopback only.
+//! TCP stays loopback-only; an explicit private socket connects a trusted TLS proxy.
 
 mod auth;
 mod config;
+mod execution;
 mod http;
+mod listen;
 mod mcp;
+mod oauth;
 
-use std::{
-    env,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    path::Path,
-    sync::Arc,
-};
+use std::{env, path::Path, sync::Arc};
 
 use anyhow::{Context, Result};
 use axum::{Router, middleware};
 use rmcp::transport::streamable_http_server::{
-    StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
+    StreamableHttpService, session::local::LocalSessionManager,
 };
 
 use crate::{auth::Authenticator, config::Config, mcp::Postern};
-
-const DEVELOPMENT_PORT: u16 = 8765;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -32,44 +28,39 @@ async fn main() -> Result<()> {
     // Fail startup unless the Keycloak issuer, audience, client and required
     // scope are configured. Never fall back to anonymous or 'dev' credentials.
     let auth = Arc::new(Authenticator::from_environment()?);
+    let execution = execution::Execution::from_environment(config_path.clone().into())?;
+    let discovery = Arc::clone(&auth.discovery);
     let hosts = Arc::new(config.hosts);
 
     // No configurable bind address in this feature: restrict to loopback.
-    let listen = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), DEVELOPMENT_PORT);
     let auth_for_service = Arc::clone(&auth);
+    let limits = Arc::new(http::Limits::from_environment(execution.is_some())?);
     let service = StreamableHttpService::new(
         move || {
             Ok(Postern::new(
                 Arc::clone(&hosts),
                 Arc::clone(&auth_for_service),
+                execution.clone(),
             ))
         },
         LocalSessionManager::default().into(),
         // Stateless MCP. No MCP session handles can be stolen or mixed between
-        // valid users. Future SSH sessions are distinct, principal-bound objects.
-        StreamableHttpServerConfig::default()
-            .with_legacy_session_mode(false)
-            .with_json_response(true),
+        // valid users. SSH sessions are distinct, principal-bound objects.
+        limits.mcp_config(),
     );
+    let protected =
+        Router::new()
+            .nest_service("/mcp", service)
+            .layer(middleware::from_fn_with_state(
+                Arc::clone(&auth),
+                auth::require_auth,
+            ));
     let router = Router::new()
-        .nest_service("/mcp", service)
-        .layer(middleware::from_fn_with_state(
-            Arc::clone(&auth),
-            auth::require_auth,
-        ))
-        // Last-added middleware runs first, before token introspection or MCP parsing.
-        .layer(middleware::from_fn_with_state(
-            Arc::new(http::Limits::default()),
-            http::protect,
-        ));
-    let listener = tokio::net::TcpListener::bind(listen).await?;
-    eprintln!(
-        "Postern Keycloak-authenticated MCP preview at http://{listen}/mcp; loopback ONLY, NO SSH; do not expose or tunnel it."
-    );
-    axum::serve(listener, router)
-        .with_graceful_shutdown(async {
-            let _ = tokio::signal::ctrl_c().await;
-        })
-        .await?;
+        .merge(protected)
+        // Anonymous access is allowed ONLY to static OAuth metadata.
+        .merge(oauth::Discovery::router(discovery))
+        // Last-added middleware runs first, before MCP parsing.
+        .layer(middleware::from_fn_with_state(limits, http::protect));
+    listen::serve(router).await?;
     Ok(())
 }

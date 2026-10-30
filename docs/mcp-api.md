@@ -1,6 +1,8 @@
 # MCP tool contract (design draft)
 
-Status: proposed tool interface; **no server or tools implemented yet**. Field names can evolve through protocol/SDK tests.
+Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
+
+Status: design contract. All five tools exist in opt-in execution mode; [execution.md](execution.md) is the implemented input/output contract and records differences from this broader proposal.
 
 All tools require authenticated HTTPS requests. The server resolves actor identity from the verified token; it never trusts a user- or model-provided identity. Authorisation is checked on **every** tool call.
 

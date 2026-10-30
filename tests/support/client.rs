@@ -1,5 +1,5 @@
 //! Send MCP over HTTP and assert status, headers and JSON before inspecting tools.
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use reqwest::{
     Client, Method,
     header::{HeaderMap, HeaderName, HeaderValue},
@@ -8,15 +8,35 @@ use serde_json::{Value, json};
 
 pub struct Mcp {
     client: Client,
+    challenge: String,
+    endpoint: String,
 }
 impl Mcp {
     pub fn new() -> Result<Self> {
+        Self::for_resource("https://postern.example/mcp")
+    }
+
+    pub fn for_resource(resource: &str) -> Result<Self> {
         Ok(Self {
+            endpoint: "http://127.0.0.1:8765/mcp".into(),
+            challenge: format!(
+                "Bearer resource_metadata=\"{}/.well-known/oauth-protected-resource{}\", scope=\"postern:use\"",
+                reqwest::Url::parse(resource)?
+                    .origin()
+                    .ascii_serialization(),
+                reqwest::Url::parse(resource)?.path()
+            ),
             client: Client::builder()
                 .no_proxy()
                 .timeout(std::time::Duration::from_secs(20))
                 .build()?,
         })
+    }
+
+    pub fn public(resource: &str) -> Result<Self> {
+        let mut client = Self::for_resource(resource)?;
+        client.endpoint = resource.into();
+        Ok(client)
     }
 
     pub async fn request(
@@ -45,12 +65,12 @@ impl Mcp {
         }
         let response = self
             .client
-            .request(verb, "http://127.0.0.1:8765/mcp")
+            .request(verb, &self.endpoint)
             .headers(headers)
             .json(&json!({"jsonrpc":"2.0", "id":1, "method":method, "params":params}))
             .send()
             .await?;
-        super::responses::check(response, status, method).await
+        super::responses::check(response, status, method, &self.challenge).await
     }
 
     pub async fn call(
@@ -63,28 +83,4 @@ impl Mcp {
         self.request(Some(token), Method::POST, method, params, status, &[])
             .await
     }
-
-    pub async fn hosts(&self, token: &str, expected: Value) -> Result<()> {
-        let result = self
-            .call(
-                token,
-                "tools/call",
-                json!({"name":"hosts","arguments":{}}),
-                200,
-            )
-            .await?;
-        ensure!(
-            result.get("error").is_none() && result["result"]["isError"] != true,
-            "hosts failed"
-        );
-        let text = result["result"]["content"][0]["text"]
-            .as_str()
-            .context("missing hosts text")?;
-        ensure!(
-            serde_json::from_str::<Value>(text)? == expected,
-            "unexpected host inventory"
-        );
-        Ok(())
-    }
 }
-use anyhow::Context;

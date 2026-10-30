@@ -1,6 +1,8 @@
 # Product requirements
 
-Status: **Proposed specification**, 29 October 2026. No implementation yet.
+Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
+
+Status: **Proposed specification**, 29 October 2026. The implemented subset and remaining gates are tracked in the branch scope report.
 
 ## Purpose
 

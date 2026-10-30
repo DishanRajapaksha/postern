@@ -1,6 +1,5 @@
 //! Exercise the installed systemd service with credentials issued by the actual realm.
 use super::state::{ISSUER, State};
-use crate::support::client::Mcp;
 use anyhow::{Context, Result};
 use reqwest::{Client, Method};
 use serde_json::{Value, json};
@@ -34,7 +33,7 @@ pub async fn run(state: &State) -> Result<Vec<String>> {
                 .to_owned(),
         );
     }
-    let mcp = Mcp::new()?;
+    let mcp = super::environment::mcp()?;
     mcp.request(None, Method::POST, "tools/list", json!({}), 401, &[])
         .await?;
     mcp.call("invalid-token", "tools/list", json!({}), 401)
