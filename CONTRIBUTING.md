@@ -12,4 +12,4 @@ Never log access tokens, refresh tokens, client secrets, authorization headers o
 
 Run the complete local suite with `sh scripts/test_docker.sh`. It needs Docker/Compose and publishes no host ports. For dependencies, install `cargo-audit` 0.22.2 with `--locked`, then run `cargo audit --deny warnings`. CI is configured to audit branch/PR changes; the daily schedule takes effect when the workflow is on the default branch.
 
-Passing tests and an advisory scan establish specific evidence; they do not certify production readiness. Preserve the loopback-only preview boundary until the deployment, OAuth, auditing and client acceptance requirements are implemented and reviewed.
+Passing tests and an advisory scan establish specific evidence; they do not certify production readiness. Preserve inventory-only defaults; public routing and SSH require explicit operator configuration, non-root acceptance and deployment verification. Privileged accounts and claimed ChatGPT compatibility require their own acceptance.

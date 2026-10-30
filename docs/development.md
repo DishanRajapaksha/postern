@@ -2,7 +2,7 @@
 
 This feature adds a real Rust MCP Streamable HTTP server with a **read-only `hosts()` tool** and **per-request Keycloak access-token introspection**.
 
-**No SSH connections, command execution, audit pipeline, public listener or verified ChatGPT OAuth login flow are implemented.** Resource discovery metadata is implemented in PR #2, but actual browser sign-in remains a separate acceptance gate. The server binds to `127.0.0.1:8765` and must not be exposed through a proxy or tunnel. A local MCP client must supply an access token obtained independently from Keycloak. The OAuth discovery metadata enables a compatible client to locate the issuer but does not establish ChatGPT app compatibility.
+The default is inventory-only with a loopback listener. **Opt-in audited SSH execution and an explicit public TLS gateway mode are implemented**; see [execution](execution.md) and [Gont deployment](../deploy/gont/README.md). A verified ChatGPT callback/PKCE/passkey round-trip remains a separate acceptance gate. Never forward the default development endpoint without configuring and validating the public mode. Local clients can supply an independently obtained Keycloak token; discovery also advertises the issuer to OAuth clients.
 
 ## Required configuration
 
@@ -105,7 +105,7 @@ The fixture includes a separate token-issuing client and verifies its token thro
 
 ## Next work
 
-A compatible ChatGPT login flow and real callback/PKCE acceptance test; eventual SSH profile/session support with strict host-key verification and durable audit-before-execute. No SSH privilege should be enabled until this is verified.
+Complete the actual ChatGPT callback/PKCE/passkey acceptance test and controlled non-root Gont deployment checks. Privileged production accounts, host activity auditing and off-host audit replication remain separate work.
 
 ## Optional public gateway and SSH
 

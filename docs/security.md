@@ -4,7 +4,7 @@ Current implementation and verification are described in [branch scope](branch-s
 
 Status: **proposed security requirements**. Do not deploy as trusted infrastructure before implementation, adversarial testing and review.
 
-The current read-only preview implements a subset; see [implemented controls and remaining deployment requirements](hardening.md) for exact limits, tests and exclusions.
+The current implementation implements a subset; see [implemented controls and remaining deployment requirements](hardening.md) for exact limits, tests and exclusions.
 
 ## Security position
 
@@ -79,4 +79,4 @@ Consequences:
 
 The current feature branch uses a **stateless MCP** transport and requires Keycloak token introspection for **every HTTP request** before the MCP service is invoked, and again inside `hosts()`. Identity is derived only from the introspected Keycloak `sub`, with exact issuer, audience, required scope, expiry and active-token validation; per-host allowlists default to deny. No MCP session ID can transfer an earlier caller's authorisation to another token. Unexpected/missing claims and Keycloak outages fail closed.
 
-The introspection client is configured locally through environment variables and must be confidential. No static development bypass, anonymous mode, HTTP introspection or token cache is implemented. The gateway remains loopback-only. This establishes a limited read-only authentication prototype, **not** a production security guarantee; external exposure and SSH execution require validated real-Keycloak and ChatGPT integration, OAuth discovery, audit and further adversarial tests.
+The introspection client is configured locally through environment variables and must be confidential. No static development bypass, anonymous mode, HTTP introspection or token cache is implemented. TCP remains loopback-only, with an opt-in private Unix socket for the trusted TLS gateway. SSH execution is explicit and audited. These controls are not a production security guarantee; actual ChatGPT acceptance and privileged-account deployment remain separate gates.
