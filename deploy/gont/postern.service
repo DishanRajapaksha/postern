@@ -10,6 +10,7 @@ StartLimitBurst=3
 Type=simple
 User=postern
 Group=postern
+SupplementaryGroups=postern-oauth
 WorkingDirectory=/srv/services/postern
 EnvironmentFile=/srv/services/postern/private/environment
 ExecStart=/srv/services/postern/current/postern
