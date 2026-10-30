@@ -2,7 +2,7 @@
 
 **An auditable SSH gateway for MCP clients.**
 
-Postern is a proposed small, self-hosted server that lets authorised MCP clients, including ChatGPT where custom tool capabilities permit, run arbitrary shell commands on explicitly configured SSH hosts. It is designed around **session-level authorisation, unrestricted commands within the SSH account's privileges, and mandatory audit records**.
+Postern is a small, self-hosted server that lets authorised MCP clients, including ChatGPT where custom tool capabilities permit, run arbitrary shell commands on explicitly configured SSH hosts. It is designed around **session-level authorisation, unrestricted commands within the SSH account's privileges, and mandatory audit records**.
 
 > **Status: early development.** PR #1 added Keycloak-authenticated host discovery; This branch adds OAuth resource discovery, an opt-in public TLS proxy origin, principal-bound OpenSSH sessions and durable command auditing. Public deployment and actual ChatGPT login must be verified separately; see the branch scope report.
 
@@ -34,7 +34,7 @@ Postern (MCP over Streamable HTTP)
 
 The proposed default authentication provider is **Keycloak** and the preferred implementation is **Rust** using the official MCP Rust SDK, Tokio/Axum and system OpenSSH. These are design preferences, not implementation claims or immutable requirements.
 
-## Proposed MCP tools
+## MCP tools
 
 | Tool | Intent |
 | --- | --- |
