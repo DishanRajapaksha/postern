@@ -1,6 +1,8 @@
 # Implementation and verification plan
 
-Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 21 unit tests, mock MCP HTTP tests and Docker integration against disposable Keycloak passing locally on 2026-10-29. See [branch scope validation](branch-scope.md) and [security hardening](hardening.md). No authenticated public endpoint, verified ChatGPT sign-in, SSH execution, sessions or auditing yet.
+Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
+
+Status: project roadmap. Read-only Keycloak-introspection MCP host-inventory development slice implemented in [PR #1](https://github.com/DishanRajapaksha/postern/pull/1), with Rust formatting, Clippy, 21 unit tests, mock MCP HTTP tests and Docker integration against disposable Keycloak passing locally on 2026-10-29. See [branch scope validation](branch-scope.md) and [security hardening](hardening.md). The expanded branch implements public proxy support, SSH sessions/execution and auditing; live deployment and ChatGPT login require the separate acceptance record.
 
 ## First implementation slice: read-only local MCP inventory (2026-10-29)
 

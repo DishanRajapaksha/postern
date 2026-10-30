@@ -2,7 +2,12 @@
 use anyhow::{Result, ensure};
 use serde_json::Value;
 
-pub async fn check(response: reqwest::Response, status: u16, method: &str) -> Result<Value> {
+pub async fn check(
+    response: reqwest::Response,
+    status: u16,
+    method: &str,
+    challenge: &str,
+) -> Result<Value> {
     ensure!(
         response.status().as_u16() == status,
         "{method}: expected {status}, received {}",
@@ -29,7 +34,7 @@ pub async fn check(response: reqwest::Response, status: u16, method: &str) -> Re
             response
                 .headers()
                 .get("www-authenticate")
-                .is_some_and(|v| v == "Bearer resource_metadata=\"https://postern.example/.well-known/oauth-protected-resource\", scope=\"postern:use\"")
+                .is_some_and(|v| v == challenge)
         );
     }
     if status != 200 {

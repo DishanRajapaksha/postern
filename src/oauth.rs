@@ -18,8 +18,12 @@ pub(crate) struct Metadata {
 pub(crate) struct Discovery {
     pub(crate) challenge: HeaderValue,
     metadata: Metadata,
+    path: String,
 }
 impl Discovery {
+    pub(crate) fn scope(&self) -> &str {
+        &self.metadata.scopes_supported[0]
+    }
     pub(crate) fn from_environment(issuer: &str, scope: &str) -> Result<Self> {
         let resource =
             env::var("POSTERN_OAUTH_RESOURCE").context("missing POSTERN_OAUTH_RESOURCE")?;
@@ -33,11 +37,16 @@ impl Discovery {
                 && url.host_str().is_some()
                 && url.username().is_empty()
                 && url.password().is_none()
-                && url.path() == "/mcp"
+                && url.path().len() > 1
+                && !url.path().ends_with('/')
+                && url
+                    .path()
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"/_-".contains(&b))
                 && url.query().is_none()
                 && url.fragment().is_none()
                 && url.as_str() == resource,
-            "OAuth resource must be a canonical HTTPS URL ending in /mcp"
+            "OAuth resource must be a canonical HTTPS URL with a nonempty endpoint path"
         );
         ensure!(
             !scope.is_empty()
@@ -47,13 +56,15 @@ impl Discovery {
             "OAuth scope must be a safe single token"
         );
         let metadata_url = format!(
-            "{}/.well-known/oauth-protected-resource",
-            url.origin().ascii_serialization()
+            "{}/.well-known/oauth-protected-resource{}",
+            url.origin().ascii_serialization(),
+            url.path()
         );
         let challenge = HeaderValue::from_str(&format!(
             "Bearer resource_metadata=\"{metadata_url}\", scope=\"{scope}\""
         ))?;
         Ok(Self {
+            path: format!("/.well-known/oauth-protected-resource{}", url.path()),
             challenge,
             metadata: Metadata {
                 resource: resource.to_owned(),
@@ -70,10 +81,7 @@ impl Discovery {
                 "/.well-known/oauth-protected-resource",
                 get(resource_metadata),
             )
-            .route(
-                "/.well-known/oauth-protected-resource/mcp",
-                get(resource_metadata),
-            )
+            .route(&state.path.clone(), get(resource_metadata))
             .with_state(state)
     }
 }

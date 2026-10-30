@@ -1,5 +1,7 @@
 # Security model and threat analysis
 
+Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
+
 Status: **proposed security requirements**. Do not deploy as trusted infrastructure before implementation, adversarial testing and review.
 
 The current read-only preview implements a subset; see [implemented controls and remaining deployment requirements](hardening.md) for exact limits, tests and exclusions.

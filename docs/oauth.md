@@ -1,10 +1,10 @@
 # OAuth discovery and Keycloak login (PR #2)
 
-**Status: development preview, not production ChatGPT connectivity.** This feature only publishes the metadata that tells an MCP client where to authenticate. Login, authorisation-code issuance, PKCE checks, client registration and refresh tokens are handled by **Keycloak**, never Postern.
+**Status: development preview, not production ChatGPT connectivity.** This feature publishes issuer discovery and supports an explicit public gateway origin; real login remains an issuer/client acceptance test. Login, authorisation-code issuance, PKCE checks, client registration and refresh tokens are handled by **Keycloak**, never Postern.
 
 ## What is implemented
 
-- `GET /.well-known/oauth-protected-resource` and `GET /.well-known/oauth-protected-resource/mcp` return identical [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728.html) JSON documents.
+- `GET /.well-known/oauth-protected-resource` and `GET /.well-known/oauth-protected-resource/<resource-path>` return identical [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728.html) JSON documents.
 - `resource` identifies the externally intended HTTPS `/mcp` endpoint, `authorization_servers` contains the pinned Keycloak realm, `scopes_supported` advertises the required scope, and `bearer_methods_supported` is `["header"]`.
 - Unauthorized MCP requests receive HTTP 401 with `WWW-Authenticate: Bearer resource_metadata="<resource-metadata-url>", scope="<scope>"`. Keycloak outages remain 503; invalid tokens never fall back to anonymous calls.
 - Public metadata does not weaken the existing authentication middleware: **every request to `/mcp` still requires fresh introspection**, and `hosts()` still checks the principal a second time.
@@ -18,9 +18,9 @@ The existing `POSTERN_KEYCLOAK_ISSUER`, `POSTERN_KEYCLOAK_SCOPE` and introspecti
 POSTERN_OAUTH_RESOURCE=https://postern.example.org/mcp
 ```
 
-Use the *exact eventual externally visible* HTTPS resource URL, including any explicit port. The parser rejects HTTP, missing hosts, credentials in URLs, query strings, fragments, trailing slashes and noncanonical URL syntax. No OAuth location is inferred from untrusted Host, Origin or forwarding headers. Invalid or absent configuration aborts startup. **Do not publish credentials or private infrastructure addresses in Git.**
+Use the *exact eventual externally visible* HTTPS resource URL, including any explicit port. The parser rejects HTTP, missing hosts, credentials in URLs, query strings, fragments, trailing slashes, unsafe endpoint characters and noncanonical URL syntax. No OAuth location is inferred from untrusted Host, Origin or forwarding headers. Invalid or absent configuration aborts startup. **Do not publish credentials or private infrastructure addresses in Git.**
 
-The computed discovery URL is `https://postern.example.org/.well-known/oauth-protected-resource` and the advertised issuer comes from the already configured `POSTERN_KEYCLOAK_ISSUER`. The server is still **hard-wired to loopback**; this configuration alone does not make it publicly accessible or ready for ChatGPT.
+The challenge points to `https://postern.example.org/.well-known/oauth-protected-resource/mcp` and the advertised issuer comes from the already configured `POSTERN_KEYCLOAK_ISSUER`. TCP remains hard-wired to loopback. Explicit public proxy mode can expose the service through a private Unix socket and trusted TLS gateway; see the Gont runbook.
 
 ## Keycloak setup needed before real ChatGPT sign-in
 
@@ -39,6 +39,6 @@ The computed discovery URL is `https://postern.example.org/.well-known/oauth-pro
 
 ## Release gate still open
 
-This PR does **not** add a public listener, a TLS termination configuration, proxy header trust, client registration, public OAuth login, ChatGPT connection verification, SSH sessions or command auditing. These require separate review, request/header limits at the edge, rate limiting and an actual authenticated ChatGPT round-trip before the service is exposed to production.
+ChatGPT connection verification still requires the exact callback and a real passkey sign-in. Public proxy support and opt-in audited SSH are described in the execution and Gont documents. Postern does not implement Keycloak authorization or token endpoints, or anonymous dynamic registration. These require separate review, request/header limits at the edge, rate limiting and an actual authenticated ChatGPT round-trip before the service is exposed to production.
 
 References: [MCP authorisation discovery](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization) · [OpenAI plugin authentication](https://developers.openai.com/plugins/build/auth) · [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728.html)

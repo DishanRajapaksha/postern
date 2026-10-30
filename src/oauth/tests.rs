@@ -20,7 +20,7 @@ fn advertises_keycloak_with_a_correct_bearer_challenge() {
     assert_eq!(json["bearer_methods_supported"][0], "header");
     assert_eq!(
         oauth.challenge.to_str().unwrap(),
-        "Bearer resource_metadata=\"https://postern.example.org/.well-known/oauth-protected-resource\", scope=\"postern:use\""
+        "Bearer resource_metadata=\"https://postern.example.org/.well-known/oauth-protected-resource/mcp\", scope=\"postern:use\""
     );
 }
 

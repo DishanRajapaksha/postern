@@ -1,23 +1,21 @@
-# Branch scope validation: feat/hosts-mcp
+# Branch scope: feat/oauth-discovery
 
-Compared with `main`, this branch implements the first read-only development slice. The broader requirements describe a future SSH gateway and are not acceptance claims for this branch.
+Compared with `main` (`fd50078`), this branch implements OAuth discovery and, at the operator's explicit request on 2026-10-30, public gateway support and audited SSH execution. The earlier hosts-only branch report is superseded.
 
-| Area | Implementation and validation |
+| Area | Implemented boundary |
 | --- | --- |
-| Transport | Rust/Axum Streamable HTTP MCP on fixed `127.0.0.1:8765/mcp`; stateless responses. Docker integration inspects the actual listening socket and HTTP session headers. |
-| Tool surface | Only `hosts`, returning IDs/descriptions. Integration asserts the complete tool list and rejects calls to the planned execution/session/audit tools. |
-| Authentication | HTTPS Keycloak introspection on each HTTP request, plus a fresh check inside `hosts`; exact issuer/audience/scope and temporal/access-token checks; no redirects or ambient proxy routing. Real-Keycloak tests complement deterministic mock and unit tests. |
-| Authorisation | Exact subject allowlists, empty grants deny access, sorted inventory. Real users exercise private/shared/invisible hosts and alternating requests; exact response comparisons detect grant leakage. |
-| Configuration | Explicit inventory and mandatory issuer/client settings; bounded schema, unknown fields rejected, no SSH connection data. Unit tests cover inventory validation; Docker tests cover startup failures. |
+| Discovery | Static RFC 9728 JSON at the root compatibility URL and the configured resource-specific well-known path; path-specific 401 challenge with the required scope. No caller-derived URLs or issuer requests for metadata. |
+| Authentication | Fresh Keycloak HTTPS introspection at the HTTP gate and inside every tool; the two principals must match. Invalid credentials return 401; issuer failures return 503. |
+| Public access | Explicit `POSTERN_PUBLIC_PROXY=true` allows only the configured HTTPS origin/Host. TCP remains loopback; optional mode-0600 Unix socket supports Caddy. Forwarding headers cannot select identities, origins or metadata. |
+| SSH | Optional separate operator configuration registers four execution tools. System OpenSSH, pinned host keys, private key files, no ambient configuration/agent/proxy, no local shell interpolation. |
+| Sessions | Random principal/host-bound handles, 32 live/opening sessions, one active command per session, 300-second idle and 3600-second absolute expiry. Current grants are reloaded before dispatch. Closure/revocation blocks new work; dispatched commands drain. |
+| Audit | SQLite WAL with FULL synchronization and exclusive writer ownership. Append accepted and running events before SSH command spawn. Read only the current issuer+subject's records. Recovery marks unfinished commands unknown. Write failure disables new executions. |
+| Bounds | Commands at most 8192 bytes; timeout 1..60 seconds; stdout/stderr each retain at most 65536 bytes while pipes continue draining. Outputs are returned but not stored in audit. Public requests have a shared 30/second budget with burst 120, 32-request concurrency, 16 KiB bodies and a 15-second body-read deadline. Execution-enabled handlers have a 75-second overall deadline. |
 
-The review found two test blind spots and corrected them: the old smoke test checked for a session header in the JSON body rather than the HTTP response, and the description-validation unit test omitted mandatory `allowed_subjects`, allowing failure for the wrong reason. The smoke suite now also asserts the exact introspection count on a successful tool call and rejection when the second introspection sees a revoked token.
+The default remains inventory-only. SSH destinations, usernames, ports, key paths and host-key pins are administrator inputs, never tool inputs. No command-content policy or per-command server approval is added. [Execution details](execution.md) specify limitations and account switching.
 
-Docker integration adds an actual disposable Keycloak issuer without changing application behavior or exposing the development endpoint. Run `sh scripts/test_docker.sh`; CI runs the same entry point. See [development instructions](development.md) for fixtures, coverage and cleanup.
+Verification uses formatting, warnings-denied Clippy, Cargo tests, enforced 100-line source/config limits, a disposable genuine Keycloak realm and a disposable real OpenSSH daemon. Tests cover cross-user isolation, revocation, host-key mismatch, complex shell text, output overflow, timeout, recovery and audit-write failure before dispatch. Run `sh scripts/test_docker.sh` for the complete suite.
 
-Verified on 2026-10-29 using Docker Desktop on macOS/ARM64: formatting, Clippy with warnings denied, all 21 unit tests, the expanded mock HTTPS smoke suite and all real-Keycloak integration scenarios passed. Automatic teardown removed the test containers, network and both fixture volumes. CI is configured to run the same suite on Ubuntu; that CI run has not been observed as part of this local verification.
+Live Gont deployment and the actual ChatGPT callback/passkey round-trip are recorded separately in `deploy/gont/verification.json`; do not infer those from local tests. The ChatGPT connection can require user interaction and depends on the account's available custom MCP capabilities.
 
-Still outside this branch's implemented scope: SSH execution, persistent execution sessions, durable auditing, OAuth resource discovery and client login, public TLS/listener hardening, deployment packaging and verification with the user's ChatGPT account. Consequently neither the Phase 0 ChatGPT gate nor the Phase 1 SSH milestone is satisfied. These tests do not justify public deployment.
-
-The follow-up hardening adds a dependency lockfile, locked builds, Rust 1.93 as the declared/tested minimum, pinned CI actions/container images, scheduled advisory scans, and enforced 100-line limits for handwritten code/configuration. Origin/Host checks, bounded work, same-principal checks and private response headers are covered by regression tests; see [implemented security controls](hardening.md). A local `cargo audit --deny warnings` with cargo-audit 0.22.2 passed against 1,386 advisories and 188 locked dependency entries. This checks known Rust advisories, not container vulnerabilities or undiscovered defects.
-
-All test clients, TLS mocks, realm/certificate fixture generation and file-length checks are now native Rust Cargo integration tests. The Python harness was removed. Normal Cargo runs execute the mock and source-size tests; the two Docker-specific targets are ignored until the Compose wrapper explicitly runs fixture generation and the genuine Keycloak test.
+Remaining scope: interactive shells/PTYS, durable background jobs, file transfer, admin-wide audit API, host activity auditing, tamper-proof/off-host audit replication, and power-loss guarantees beyond SQLite/filesystem durability. SSH exit 255 is indeterminate because it can represent either transport loss or a remote exit 255. A timeout does not guarantee termination of remote descendants. These limitations must not be represented as completed acceptance criteria.

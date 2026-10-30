@@ -1,5 +1,7 @@
 # Deployment and configuration design
 
+Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
+
 Status: **proposed**; examples are illustrative and **not working configuration** until a schema is implemented.
 
 ## Expected deployment

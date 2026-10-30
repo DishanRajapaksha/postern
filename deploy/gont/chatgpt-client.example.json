@@ -1,0 +1,43 @@
+{
+  "clientId": "postern-chatgpt",
+  "name": "Postern SSH through ChatGPT",
+  "enabled": false,
+  "protocol": "openid-connect",
+  "publicClient": true,
+  "standardFlowEnabled": true,
+  "directAccessGrantsEnabled": false,
+  "serviceAccountsEnabled": false,
+  "implicitFlowEnabled": false,
+  "fullScopeAllowed": false,
+  "redirectUris": ["REPLACE_WITH_EXACT_CHATGPT_CALLBACK"],
+  "webOrigins": [],
+  "attributes": {
+    "pkce.code.challenge.method": "S256",
+    "access.token.lifespan": "120",
+    "postern.managed": "public-ssh"
+  },
+  "defaultClientScopes": ["basic", "postern:use"],
+  "optionalClientScopes": ["offline_access"],
+  "protocolMappers": [
+    {
+      "name": "postern-resource-audience",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-audience-mapper",
+      "config": {
+        "included.custom.audience": "https://leyline.talesfrom.earth/postern",
+        "access.token.claim": "true",
+        "introspection.token.claim": "true"
+      }
+    },
+    {
+      "name": "postern-introspection-audience",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-audience-mapper",
+      "config": {
+        "included.client.audience": "postern-resource",
+        "access.token.claim": "true",
+        "introspection.token.claim": "true"
+      }
+    }
+  ]
+}

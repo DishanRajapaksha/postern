@@ -6,6 +6,7 @@ use reqwest::Method;
 use serde_json::json;
 
 pub async fn run(mcp: &Mcp, alice: &str, bob: &str) -> Result<()> {
+    crate::support::discovery::check(ISSUER).await?;
     for verb in [Method::POST, Method::GET, Method::DELETE] {
         mcp.request(None, verb.clone(), "tools/list", json!({}), 401, &[])
             .await?;

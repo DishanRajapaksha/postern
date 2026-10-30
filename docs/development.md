@@ -67,7 +67,7 @@ POSTERN_CONFIG=config/postern.local.json cargo run --locked
 
 Endpoint: `http://127.0.0.1:8765/mcp` **on the same machine only**. The localhost MCP transport is not TLS because it must never leave the machine; the Keycloak introspection connection uses verified HTTPS.
 
-Every HTTP request (including initialise, discovery, tools and unsupported GET/DELETE operations) must have `Authorization: Bearer <access-token>`. Requests without a valid, currently active token are denied before MCP processing. The MCP transport operates **statelessly**: no `Mcp-Session-Id` can be used to inherit an earlier caller's authorisation. This is separate from the principal-bound SSH execution sessions planned later.
+Every MCP HTTP request (including initialise, tool discovery, tools and unsupported GET/DELETE operations) must have `Authorization: Bearer <access-token>`. Requests without a valid, currently active token are denied before MCP processing. The MCP transport operates **statelessly**: no `Mcp-Session-Id` can be used to inherit an earlier caller's authorisation. This is separate from the principal-bound SSH execution sessions planned later.
 
 ## Tests
 
@@ -106,3 +106,7 @@ The fixture includes a separate token-issuing client and verifies its token thro
 ## Next work
 
 A compatible ChatGPT login flow and real callback/PKCE acceptance test; eventual SSH profile/session support with strict host-key verification and durable audit-before-execute. No SSH privilege should be enabled until this is verified.
+
+## Optional public gateway and SSH
+
+The inventory-only defaults above remain available. See [execution configuration](execution.md) and [Gont deployment](../deploy/gont/README.md) for the explicit public proxy and execution settings. The Docker runner now also tests real OpenSSH, host-key rejection, output/timeout bounds, isolation and audit-before-dispatch failure.

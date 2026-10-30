@@ -1,0 +1,14 @@
+{
+  "audit_dir": "/srv/services/postern/audit",
+  "runtime_dir": "/srv/services/postern/run",
+  "profiles": [
+    {
+      "host_id": "gont",
+      "hostname": "127.0.0.1",
+      "username": "postern-ssh",
+      "port": 22,
+      "identity_file": "/srv/services/postern/credentials/id_ed25519",
+      "known_hosts_file": "/srv/services/postern/credentials/known_hosts"
+    }
+  ]
+}

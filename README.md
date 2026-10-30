@@ -4,7 +4,7 @@
 
 Postern is a proposed small, self-hosted server that lets authorised MCP clients, including ChatGPT where custom tool capabilities permit, run arbitrary shell commands on explicitly configured SSH hosts. It is designed around **session-level authorisation, unrestricted commands within the SSH account's privileges, and mandatory audit records**.
 
-> **Status: early development.** PR #1 added Keycloak-authenticated host discovery; PR #2 adds OAuth resource metadata and 401 discovery challenges. There is no SSH execution, persistent SSH session, public deployment, ChatGPT login acceptance test or audit pipeline. This is not production-ready.
+> **Status: early development.** PR #1 added Keycloak-authenticated host discovery; This branch adds OAuth resource discovery, an opt-in public TLS proxy origin, principal-bound OpenSSH sessions and durable command auditing. Public deployment and actual ChatGPT login must be verified separately; see the branch scope report.
 
 ## Principles
 
@@ -48,7 +48,7 @@ A **persistent SSH connection is not a persistent interactive shell**. Each `exe
 
 ## Development preview
 
-The first feature is a read-only `hosts()` tool and loopback-only Rust Streamable HTTP MCP server, merged from PR #1. PR #2 implements RFC 9728 resource metadata so an OAuth client can discover Keycloak. See [local development instructions](docs/development.md) and [OAuth setup](docs/oauth.md). The server is still **loopback-only**; ChatGPT sign-in, public TLS and SSH commands are not yet verified or enabled. Never expose this preview through a proxy or tunnel.
+The default configuration exposes only `hosts()` on loopback. Explicit execution configuration adds `open_session`, `exec`, `close_session` and `audit`. Public access requires an explicitly configured HTTPS origin and a trusted TLS gateway connected through a private Unix socket. See [local development](docs/development.md), [OAuth setup](docs/oauth.md), [execution configuration](docs/execution.md) and the [scope and verification report](docs/branch-scope.md).
 
 ## Documentation
 

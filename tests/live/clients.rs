@@ -5,6 +5,7 @@ use reqwest::Method;
 use serde_json::{Value, json};
 
 pub async fn create(admin: &Admin, name: &str, diagnostic: bool) -> Result<String> {
+    let audience = std::env::var("POSTERN_KEYCLOAK_AUDIENCE").unwrap_or_else(|_| "postern".into());
     let existing = admin.get(&format!("/clients?clientId={name}")).await?;
     ensure!(
         existing.as_array().is_some_and(Vec::is_empty),
@@ -17,7 +18,7 @@ pub async fn create(admin: &Admin, name: &str, diagnostic: bool) -> Result<Strin
             {"name":"postern-subject", "protocol":"openid-connect", "protocolMapper":"oidc-sub-mapper",
              "config":{"access.token.claim":"true","introspection.token.claim":"true"}},
             {"name":"postern-audience", "protocol":"openid-connect", "protocolMapper":"oidc-audience-mapper",
-             "config":{"included.custom.audience":"postern",
+             "config":{"included.custom.audience":audience,
                 "access.token.claim":"true","introspection.token.claim":"true"}}, introspection_audience()]
     })).await?;
     let created = admin.get(&format!("/clients?clientId={name}")).await?;

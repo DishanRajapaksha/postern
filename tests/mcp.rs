@@ -34,7 +34,10 @@ async fn mcp_rechecks_tokens_and_never_leaks_another_subjects_hosts() -> Result<
     ] {
         env.insert(name.into(), value);
     }
+    support::startup::check(&env).await?;
     let mut server = Postern::start(&env).await?;
+    support::discovery::check(&issuer.state.issuer).await?;
+    anyhow::ensure!(issuer.count("outage")? == 0);
     // Only static discovery is anonymous. All MCP methods still require a token.
     let client = reqwest::Client::builder().no_proxy().build()?;
     for path in [
