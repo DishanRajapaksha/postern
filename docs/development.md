@@ -2,7 +2,7 @@
 
 This feature adds a real Rust MCP Streamable HTTP server with a **read-only `hosts()` tool** and **per-request Keycloak access-token introspection**.
 
-The default is inventory-only with a loopback listener. **Opt-in audited SSH execution and an explicit public TLS gateway mode are implemented**; see [execution](execution.md) and [Gont deployment](../deploy/gont/README.md). A verified ChatGPT callback/PKCE/passkey round-trip remains a separate acceptance gate. Never forward the default development endpoint without configuring and validating the public mode. Local clients can supply an independently obtained Keycloak token; discovery also advertises the issuer to OAuth clients.
+The default is inventory-only with a loopback listener. **Opt-in audited SSH execution and an explicit public TLS gateway mode are implemented**; see [execution](execution.md) and [Gont deployment](../deploy/gont/README.md). The Gont public adapter uses FastMCP OAuthProxy; the user confirmed login and command/audit operations. Deployment-specific acceptance is recorded separately from the local suite. Never forward the default development endpoint without configuring and validating the public mode. Local clients can supply an independently obtained Keycloak token; discovery also advertises the issuer to OAuth clients.
 
 ## Required configuration
 
@@ -95,7 +95,7 @@ The suite generates a temporary CA and signed server certificate, imports three 
 
 Compose publishes **no host ports**. The runner shares Keycloak's disposable network namespace so that Postern can retain its fixed loopback bind; there is no forwarding proxy or public listener. The wrapper uses a unique project and removes that project's containers, network and fixture volume on success or failure. Fixture passwords and client secrets are public test data, and generated private keys stay in the disposable volume. Password grants are enabled only in this test realm to obtain tokens without an interactive browser.
 
-The setup uses Keycloak's documented [realm import](https://www.keycloak.org/server/containers#_importing_a_realm_on_startup) and [PEM TLS configuration](https://www.keycloak.org/server/enabletls). It validates this development slice against a local real issuer; the public OAuth/ChatGPT acceptance gate below remains outstanding.
+The setup uses Keycloak's documented [realm import](https://www.keycloak.org/server/containers#_importing_a_realm_on_startup) and [PEM TLS configuration](https://www.keycloak.org/server/enabletls). It validates this development slice against a local real issuer; public OAuth and actual connector behavior require their own deployment acceptance.
 
 Compose runs `cargo test --locked --test fixtures -- --ignored` in its init container to generate disposable realm/certificate files. The test runner then runs `cargo test --locked --all-targets` followed by `cargo test --locked --test keycloak -- --ignored`. Keep fixture generation inside Docker; it writes to the mounted `/fixtures` and `/realms` volumes.
 
@@ -105,8 +105,8 @@ The fixture includes a separate token-issuing client and verifies its token thro
 
 ## Next work
 
-Complete the actual ChatGPT callback/PKCE/passkey acceptance test and controlled non-root Gont deployment checks. Privileged production accounts, host activity auditing and off-host audit replication remain separate work.
+Repeat public owner login/tool acceptance and controlled non-root Gont checks after relevant changes. Privileged production accounts, host activity auditing and off-host audit replication remain separate work.
 
 ## Optional public gateway and SSH
 
-The inventory-only defaults above remain available. See [execution configuration](execution.md) and [Gont deployment](../deploy/gont/README.md) for the explicit public proxy and execution settings. The Docker runner now also tests real OpenSSH, host-key rejection, output/timeout bounds, isolation and audit-before-dispatch failure.
+The inventory-only defaults above remain available. See [execution configuration](execution.md) and [Gont deployment](../deploy/gont/README.md) for the explicit public proxy and execution settings. The Docker runner also tests real OpenSSH, host-key rejection, supervised cgroup deadlines, isolation, transport loss, shell preservation, independent-session concurrency and audit-before-dispatch failure. The disposable integration container runs systemd as PID 1 with a writable cgroup v2 mount and Docker privilege; it publishes no host ports. This is required to test real process-tree termination rather than a mocked service manager. The fixture generator and Keycloak container remain unprivileged.

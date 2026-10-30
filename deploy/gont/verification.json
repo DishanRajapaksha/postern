@@ -1,13 +1,13 @@
 {
   "verified_on": "2026-10-30",
-  "status": "public MCP and non-root audited SSH verified; ChatGPT callback/login pending",
-  "source_commit": "f43ac0d00d12e34c01f35df14682ec5cd5b5d3d1",
-  "source_branch": "feat/oauth-discovery",
+  "status": "OAuthProxy login, user execution/audit and native supervised non-root SSH accepted",
+  "source_commit": "0afb9fef7c76bac064a73b186e73c9c2cea53486",
+  "source_branch": "fix/oauth-discovery-compatibility",
   "build": {
     "rust": "1.93",
     "profile": "debug",
     "architecture": "x86_64 Linux",
-    "binary_sha256": "8c0e111f597129b83923c9aa2d5670f346115631a8a39251c400d0176f6cb9fd"
+    "binary_sha256": "a83ae4d10a98253591c7f3c7ce840bde1623fb7ed7a7490a2528657efd818a62"
   },
   "runtime": {
     "directory": "/srv/services/postern",
@@ -18,17 +18,19 @@
     "ssh_sudo_allowed": false,
     "tcp_listener": "127.0.0.1:8765",
     "proxy_socket": "/srv/services/postern/proxy/http.sock",
-    "restart_count": 0
+    "restart_count": 0,
+    "supervision": "target-side systemd user services; cgroup v2; lingering enabled"
   },
   "oauth": {
     "resource": "https://leyline.talesfrom.earth/postern",
     "metadata": "https://leyline.talesfrom.earth/.well-known/oauth-protected-resource/postern",
-    "issuer": "https://heimdall.talesfrom.earth/keycloak/realms/gont",
-    "client_id": "postern-chatgpt",
-    "client_enabled": false,
-    "callback": "pending exact URI from ChatGPT",
+    "issuer": "https://leyline.talesfrom.earth/postern",
+    "upstream_issuer": "https://heimdall.talesfrom.earth/keycloak/realms/gont",
+    "upstream_client_id": "postern-login",
+    "callback": "https://leyline.talesfrom.earth/postern/auth/callback",
     "pkce": "S256 required",
-    "anonymous_registration_enabled": false
+    "registration": "FastMCP OAuthProxy DCR/CIMD; client ID and secret blank",
+    "user_acceptance": "User confirmed login and subsequent command/audit tool operations before supervision fix"
   },
   "checks": {
     "public_metadata_http": 200,
@@ -48,31 +50,31 @@
     "trilium_health": "ok"
   },
   "hashes": {
-    "unit": "aa1f1ad3eb7c5178f76fbf7908701a1adcdd9078af7519a7f23ffc75b815deb5",
+    "unit": "539ad4a9bbd8895a571889bcf55224f3972c3cc2dbf2067876c34f60ae33ba4b",
     "inventory": "fe2c620f4849b3a65e02e5af1e263aee289f6931414c3041b406ece6658a08a5",
     "execution_config": "614cab2085f7bece52dbeaf7adf6012c5c182f73f83a82add15acbec3460fb94",
-    "caddyfile": "9e64f4dcef00af06fe9d82ea876db04408e0b196f2794dbd77bf4d60821ba3a8",
+    "caddyfile": "cd8f6b8ea16761876c2c0a90f0b6cd3c3b15a76e0444ceea525d283ab1517baf",
     "caddy_compose": "0bf172e6bda89de5794372fb416724827044c6ae8335a2e58b57f88a5775d767"
   },
   "tests": {
-    "local_format_clippy_all_targets": "passed at f43ac0d",
-    "unit_tests": 26,
-    "full_docker_mac": "passed before final SDK Host correction; corrected public Host SSH regression passed afterward",
-    "full_docker_gont": "passed using 73f94e5 image with 7ca2f01 chunked-body test fix mounted",
-    "live_public_gont": "passed against f43ac0d native binary",
-    "rustsec_advisories": 1386,
-    "locked_crates_scanned": 198,
-    "cargo_audit": "0.22.2; no warnings",
+    "format_clippy_all_targets": "passed",
+    "unit_tests": 29,
+    "full_docker_mac": "passed final runtime code: genuine Keycloak and systemd/OpenSSH regressions",
+    "native_gont": "authenticated temporary real issuer principal; supervision-verification.json",
+    "proxy_tests": "7 passed using exact FastMCP 4.1.3 runtime",
+    "public_oauth": "automatic registration, CSRF consent and S256 redirect passed after restart",
+    "cargo_audit": "0.22.2; 198 locked crates; 1395 advisories; no warnings",
     "ci_status": "not observed"
   },
   "rollback": {
-    "previous_release": "9a911e6075bfc9ae3e3c1af80c64537028dd709e",
-    "private_configuration_backup": "/srv/services/postern/recovery/20261030-public-ssh",
+    "previous_release": "642fb03406fba2187f00319f2816f5d0dcc95b99",
+    "private_configuration_backup": "/srv/services/postern/recovery/20261030-oauth-proxy",
     "retain_audit_data": true
   },
   "remaining": [
-    "Exact ChatGPT callback registration, owner passkey login and actual ChatGPT tool invocation",
-    "Privileged target accounts require a separate operator profile/key change",
-    "No off-host audit replication, interactive PTY, durable jobs or admin-wide audit API"
+    "Actual connector timeout retest after the native supervision fix",
+    "Privileged target accounts require separate profile/key/acceptance",
+    "No off-host audit replication, interactive PTY, durable jobs or admin-wide audit API",
+    "Historical timed_out records with null termination fields do not prove a remote kill"
   ]
 }

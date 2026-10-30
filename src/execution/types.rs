@@ -43,6 +43,12 @@ pub(super) struct Record {
     pub finished_at: Option<u64>,
     pub outcome: String,
     pub exit_code: Option<i32>,
+    #[serde(default)]
+    pub timeout_seconds: Option<u64>,
+    #[serde(default)]
+    pub termination_confirmed: Option<bool>,
+    #[serde(default)]
+    pub supervisor_result: Option<String>,
     pub stdout_bytes: u64,
     pub stderr_bytes: u64,
     pub stdout_truncated: bool,

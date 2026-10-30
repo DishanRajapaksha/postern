@@ -10,7 +10,9 @@ Create `postern-ssh` as a separate non-root target account with a home directory
 
 The host ID remains `gont`; its address, account, port, credentials and host-key path are entirely operator-configurable. A later switch to an administrator requires a separate credential/grant review and an execution-profile edit plus restart. Neither MCP commands nor tool arguments can select an arbitrary account or destination.
 
-Keycloak remains the existing Heimdall `gont` realm. Preserve its passkey flow, audience validation and disabled password grants. Do not reuse another service's secret or enable anonymous dynamic registration. A separate pre-registered `postern-chatgpt` OAuth client uses authorization code, mandatory PKCE S256 and only the exact callback supplied by ChatGPT. The example is disabled until that exact callback is configured. Access tokens need the stable subject, public resource audience, introspection audience and `postern:use` scope. The confidential introspection client is separate from this public login client.
+Keycloak remains the existing Heimdall `gont` realm. The dedicated FastMCP OAuthProxy adapter is deployed from the infrastructure repository's `deployed/postern/oauth/`; it uses `postern-login`, a confidential client with mandatory S256 and the fixed callback `https://leyline.talesfrom.earth/postern/auth/callback`. Keep the existing passkey flow and audience validation. MCP clients use automatic registration with blank client ID/secret. The old manual `postern-chatgpt` client stays disabled. The native introspection client remains separate.
+
+Remote execution requires cgroup v2 and systemd 250+. For the configured non-root account, run `loginctl enable-linger postern-ssh` and `systemctl start user@$(id -u postern-ssh).service` as the host administrator. This grants no sudo rights to the target account. Commands run in transient user services with independent deadlines and cgroup-wide stop/escalation. Keep lingering enabled for every configured target account; there is no unsupervised fallback. See [execution semantics](../../docs/execution.md).
 
 Run formatting, Clippy, all Cargo tests and `sh scripts/test_docker.sh` before release. Compare binary hashes across build and installation. The full suite publishes no host ports and tests both genuine Keycloak and OpenSSH.
 
@@ -21,7 +23,8 @@ Acceptance checks:
 1. Only loopback TCP plus the private Unix socket listens; LAN/Tailscale probes cannot connect to port 8765.
 2. Public metadata is JSON 200, advertises the exact resource and issuer, and has no-store/nosniff headers. Anonymous/invalid MCP calls return 401 with the path-specific challenge; foreign Origin/Host and oversized bodies are rejected.
 3. A real issuer token sees exactly the five tools. Authorised test SSH commands return the non-root account identity, a durable command record and bounded output. Other principals cannot use the session or query its audit data. Revocation blocks the next operation.
-4. The exact ChatGPT callback, PKCE and owner passkey login complete, followed by a real tool call. Until observed, this gate stays pending.
-5. Check Heimdall discovery, existing Leyline/Pensieve MCP and Trilium health after changes. Record source/binary/config hashes and any pending gates without secrets.
+4. Automatic registration, CSRF consent, S256 and owner passkey login complete, followed by real tool calls. User confirmed this path on 2026-10-30. Repeat after relevant OAuth changes.
+5. Timeout a delayed marker, a TERM-ignoring child and a detached process group; confirm no marker appears after the original delay and that audit reports confirmed termination. Transport loss must report unknown/unconfirmed while the remote timer continues.
+6. Check Heimdall discovery, existing Leyline/Pensieve MCP and Trilium health after changes. Record source/binary/config hashes and any pending gates without secrets.
 
 Recovery: stop `postern.service`, restore the previously recorded private environment/config and unit, repoint `current` to the retained previous release, reload systemd and start it. Remove only the Postern gateway routes/mount if withdrawing public access, keeping all existing routes. Retain audit data; restarting invalidates sessions and marks unfinished command records unknown. Private rollback copies must remain root-only on Gont.

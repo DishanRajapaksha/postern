@@ -5,6 +5,8 @@ POSTERN_CONFIG=/srv/services/postern/config/hosts.json
 POSTERN_OAUTH_RESOURCE=https://leyline.talesfrom.earth/postern
 POSTERN_PUBLIC_PROXY=true
 POSTERN_PROXY_SOCKET=/srv/services/postern/proxy/http.sock
+# Populate with the dedicated broker group's numeric gid on the deployment host.
+POSTERN_PROXY_SOCKET_GROUP=REPLACE_WITH_POSTERN_OAUTH_GID
 POSTERN_EXECUTION_CONFIG=/srv/services/postern/config/execution.json
 POSTERN_KEYCLOAK_ISSUER=https://heimdall.talesfrom.earth/keycloak/realms/gont
 POSTERN_KEYCLOAK_AUDIENCE=https://leyline.talesfrom.earth/postern

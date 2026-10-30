@@ -37,3 +37,9 @@ async fn configure_gont_public_client() -> anyhow::Result<()> {
 async fn verify_gont_public_execution() -> anyhow::Result<()> {
     live::public_accept::run().await
 }
+
+#[tokio::test]
+#[ignore = "tests target-side deadlines through native MCP with a temporary real issuer principal"]
+async fn verify_gont_native_supervision() -> anyhow::Result<()> {
+    live::public_accept::run_native().await
+}

@@ -12,6 +12,7 @@ pub(super) fn start(
     execution: &Execution,
     session: &Session,
     record: &mut Record,
+    seconds: u64,
 ) -> Result<Option<tokio::process::Child>> {
     let _gate = session
         .dispatch_gate
@@ -35,7 +36,11 @@ pub(super) fn start(
     command.args(["-o", "ProxyCommand=false"]);
     ssh::destination(&mut command, &session.profile);
     command
-        .arg(&record.command)
+        .arg(super::supervisor::launch(
+            &record.command_id,
+            &record.command,
+            seconds,
+        ))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     match command.spawn() {

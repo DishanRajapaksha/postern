@@ -3,6 +3,7 @@ use super::{
     admin::Admin,
     clients, environment,
     state::{ISSUER, ROOT},
+    tool::call,
 };
 use crate::support::client::Mcp;
 use anyhow::{Context, Result, ensure};
@@ -10,6 +11,14 @@ use reqwest::Method;
 use serde_json::{Value, json};
 
 pub async fn run() -> Result<()> {
+    run_mode(false).await
+}
+
+pub async fn run_native() -> Result<()> {
+    run_mode(true).await
+}
+
+async fn run_mode(native: bool) -> Result<()> {
     let resource = environment::resource()?;
     let admin = Admin::new().await?;
     let scopes = admin.get("/client-scopes").await?;
@@ -35,19 +44,20 @@ pub async fn run() -> Result<()> {
         ensure!(response.status().is_success(),"diagnostic token issuance failed");
         let response: Value = response.json().await?;
         let token = response["access_token"].as_str().context("access token")?;
-        let mcp = Mcp::public(&resource)?;
+        let mcp = if native { Mcp::for_resource(&resource)? } else { Mcp::public(&resource)? };
         let tools = mcp.call(token,"tools/list",json!({}),200).await?;
         ensure!(tools["result"]["tools"].as_array().context("tools")?.len()==5);
         let session = call(&mcp,token,"open_session",json!({"host_id":"gont"})).await?;
         let session_id = session["session_id"].as_str().context("session id")?;
-        let result = call(&mcp,token,"exec",json!({"session_id":session_id,"command":"id -un; id -u; test ! -r /srv/services/postern/audit/audit.sqlite3"})).await?;
+        let result = call(&mcp,token,"exec",json!({"session_id":session_id,"command":"set -eu; id -un; id -u; test ! -r /srv/services/postern/audit/audit.sqlite3"})).await?;
         ensure!(result["record"]["outcome"]=="completed" && result["record"]["exit_code"]==0);
         ensure!(result["stdout"].as_str().context("stdout")?.starts_with("postern-ssh\n"));
         ensure!(result["audit_degraded"]==false);
         let audit = call(&mcp,token,"audit",json!({})).await?;
         ensure!(audit["records"].as_array().context("audit")?.len()==1);
+        if native { super::supervision::run(&mcp, token, session_id).await?; }
         call(&mcp,token,"close_session",json!({"session_id":session_id})).await?;
-        println!("PASS: public TLS MCP, real issuer, five tools, non-root SSH and durable private audit");
+        println!("PASS: real issuer, five tools, non-root SSH and durable private audit");
         Ok::<_,anyhow::Error>(token.to_owned())
     }.await;
     let restored = std::fs::write(&path, original);
@@ -61,29 +71,12 @@ pub async fn run() -> Result<()> {
     restored?;
     deleted?;
     let token = result?;
-    Mcp::public(&resource)?
-        .call(&token, "tools/list", json!({}), 401)
-        .await?;
+    let mcp = if native {
+        Mcp::for_resource(&resource)?
+    } else {
+        Mcp::public(&resource)?
+    };
+    mcp.call(&token, "tools/list", json!({}), 401).await?;
     println!("PASS: diagnostic grant/client removed and token immediately revoked");
     Ok(())
-}
-
-async fn call(mcp: &Mcp, token: &str, name: &str, args: Value) -> Result<Value> {
-    let result = mcp
-        .call(
-            token,
-            "tools/call",
-            json!({"name":name,"arguments":args}),
-            200,
-        )
-        .await?;
-    ensure!(
-        result["result"]["isError"] != true,
-        "tool operation rejected"
-    );
-    Ok(serde_json::from_str(
-        result["result"]["content"][0]["text"]
-            .as_str()
-            .context("tool result")?,
-    )?)
 }

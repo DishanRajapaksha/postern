@@ -1,11 +1,8 @@
 //! Loopback TCP plus an optional private Unix socket for the trusted TLS gateway.
+mod permissions;
 use anyhow::{Result, ensure};
 use axum::Router;
-use std::{
-    env,
-    os::unix::fs::{FileTypeExt, PermissionsExt},
-    path::PathBuf,
-};
+use std::{env, os::unix::fs::FileTypeExt, path::PathBuf};
 
 pub(crate) async fn serve(router: Router) -> Result<()> {
     let tcp = tokio::net::TcpListener::bind("127.0.0.1:8765").await?;
@@ -30,7 +27,10 @@ pub(crate) async fn serve(router: Router) -> Result<()> {
     }
     let unix = tokio::net::UnixListener::bind(&path)?;
     let tcp_router = router.clone();
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
+    permissions::apply(
+        &path,
+        env::var("POSTERN_PROXY_SOCKET_GROUP").ok().as_deref(),
+    )?;
     let result = tokio::try_join!(
         async {
             axum::serve(tcp, tcp_router)
