@@ -23,7 +23,7 @@ The session is bound to the authenticated principal, effective host policy and c
 ## `exec({ session_id, command, timeout_seconds? })`
 
 - `command`: arbitrary UTF-8 remote shell command, passed as data into the SSH invocation. Postern does **not** filter or interpret content.
-- `timeout_seconds`: bounded resource control; default and maximum are deployment configuration. Timeout cannot promise to kill all remote descendants.
+- `timeout_seconds`: implemented range 1..60 seconds, default 10. Target-side systemd/cgroup supervision confirms deadline termination only with manager evidence and an empty cgroup; missing evidence remains unknown. See [execution semantics](execution.md) for limitations.
 - Returns `command_id`, `outcome`, `exit_code` (nullable), bounded `stdout`, `stderr`, truncation flags, timestamps and duration.
 - `outcome` must distinguish `completed` (remote command exited; exit status may be non-zero), `transport_error`, `timed_out`, `cancelled`, and `unknown` (remote execution result cannot be confirmed).
 - Missing/expired session, unauthorised actor or failed pre-execution audit commit: **no command dispatch**.
@@ -40,7 +40,7 @@ Returns `closed` or `already_closed` without exposing other actors' session exis
 
 ## `audit({ session_id?, command_id?, limit?, cursor? })`
 
-List/read the actor's allowed audit events in reverse chronological order, with pagination. A separate administrative policy can authorise cross-user investigation. Do not treat an arbitrary `actor_id` supplied by the caller as proof of permission.
+List/read the actor's allowed audit events in reverse chronological order, with pagination. Admin-wide queries remain a future requirement; the current API permits only the caller's records. Do not treat an arbitrary `actor_id` supplied by the caller as proof of permission.
 
 Fields include `command_id`, `session_id`, `actor_id`, `host_id`, `command`, `accepted_at`, `started_at`, `finished_at`, `outcome`, `exit_code`, `error_class` and optional output/truncation metadata.
 

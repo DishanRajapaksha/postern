@@ -28,3 +28,5 @@ Acceptance checks:
 6. Check Heimdall discovery, existing Leyline/Pensieve MCP and Trilium health after changes. Record source/binary/config hashes and any pending gates without secrets.
 
 Recovery: stop `postern.service`, restore the previously recorded private environment/config and unit, repoint `current` to the retained previous release, reload systemd and start it. Remove only the Postern gateway routes/mount if withdrawing public access, keeping all existing routes. Retain audit data; restarting invalidates sessions and marks unfinished command records unknown. Private rollback copies must remain root-only on Gont.
+
+The [audit recovery runbook](../../docs/recovery.md) covers the separate `postern-audit` snapshot tool, fresh-directory restore, storage failures, credential rotation and incidents. Build/install the maintenance binary separately before using it on Gont; these local changes do not attest a new deployment.

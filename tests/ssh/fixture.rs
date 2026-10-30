@@ -27,6 +27,8 @@ impl Fixture {
     pub async fn start() -> Result<Self> {
         let directory = tempfile::tempdir()?;
         let root = directory.path();
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(root, fs::Permissions::from_mode(0o700))?;
         tls::certificates(root)?;
         let issuer = mock::start(root).await?;
         let sshd = daemon::start(root).await?;

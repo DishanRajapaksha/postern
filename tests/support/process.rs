@@ -60,11 +60,18 @@ impl Postern {
         }
         Ok(())
     }
+
+    pub fn stop(&mut self) -> Result<()> {
+        if self.child.try_wait()?.is_none() {
+            self.child.kill()?;
+        }
+        self.child.wait()?;
+        Ok(())
+    }
 }
 
 impl Drop for Postern {
     fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        let _ = self.stop();
     }
 }

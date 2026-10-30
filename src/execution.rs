@@ -4,6 +4,7 @@ mod config;
 mod directory;
 mod output;
 mod query;
+mod recovery;
 mod registry;
 mod runner;
 mod session;
@@ -26,15 +27,17 @@ pub(crate) struct Execution {
     audit: Arc<audit::Audit>,
     runtime: PathBuf,
     issuer: String,
+    _runtime_lock: std::fs::File,
 }
 
 impl Execution {
-    pub(crate) fn from_environment(inventory: PathBuf) -> Result<Option<Arc<Self>>> {
+    pub(crate) async fn from_environment(inventory: PathBuf) -> Result<Option<Arc<Self>>> {
         let Some(path) = std::env::var_os("POSTERN_EXECUTION_CONFIG") else {
             return Ok(None);
         };
         let config = config::ExecutionConfig::load(&PathBuf::from(path))?;
         let audit = Arc::new(audit::Audit::open(&config.audit_dir)?);
+        let runtime_lock = recovery::prepare(&config.runtime_dir).await?;
         let execution = Arc::new(Self {
             inventory,
             profiles: config
@@ -47,6 +50,7 @@ impl Execution {
             audit,
             runtime: config.runtime_dir,
             issuer: std::env::var("POSTERN_KEYCLOAK_ISSUER")?,
+            _runtime_lock: runtime_lock,
         });
         registry::reap(Arc::downgrade(&execution));
         Ok(Some(execution))

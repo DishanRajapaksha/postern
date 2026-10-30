@@ -2,7 +2,9 @@
 
 Current implementation and verification are described in [branch scope](branch-scope.md) and [execution](execution.md). Design proposals below are requirements, not evidence that every acceptance gate has passed.
 
-Status: proposed. **Postern must account for every MCP command request it accepts**, while recognising that an arbitrary remote shell may perform more operations than any one request reveals.
+Status as of **2026-10-30**: the SQLite execution audit is implemented; the broader record model and operational requirements below include future work. [Execution semantics](execution.md) describe the supported fields and failure behavior. **Postern must account for every MCP command request it accepts**, while recognising that an arbitrary remote shell may perform more operations than any one request reveals.
+
+Recorded tests cover pre-dispatch intent/running writes, actor isolation, live WAL backup/restore, gateway crash/restart, real disk-full/read-only failure and injected final-write failure. See the [local verification](local-verification.md). Crash injection at every transition, deployed recovery drills, physical power loss and off-host replication remain open in the [roadmap](roadmap.md).
 
 ## Two different meanings of "every command"
 
@@ -36,11 +38,11 @@ Use an append-only event stream or immutable transitions plus a materialised cur
 1. Validate token, authorise session and check constraints.
 2. Allocate `command_id`; write and durably commit `accepted` with exact command, actor and target.
 3. **Only after a successful commit**, dispatch the SSH command.
-4. Best-effort record `running` and eventually `completed`, `transport_error`, `timed_out`, `cancelled` or `unknown`.
+4. The implementation also durably commits `running` before command spawn; failure prevents dispatch. After dispatch, attempt to record the observed final outcome, including `completed`, `terminated`, `transport_error`, `timed_out`, `cancelled` or `unknown`.
 5. If the post-dispatch audit store fails, report degraded state, stop accepting *new* executions and preserve forensic uncertainty. Do **not** claim the remote command failed just because logging failed.
 6. On restart, reconcile incomplete records as indeterminate unless there is reliable independent evidence of their completion.
 
-SQLite with WAL and `synchronous=FULL` is an initial candidate; validate actual durability guarantees on the chosen filesystem, hardware and transaction boundaries. Disk-full, read-only filesystem and power-loss tests are release gates.
+The implementation uses SQLite WAL with `synchronous=FULL` and exclusive writer ownership. Disposable Docker tests cover real disk-full and read-only filesystems; they do not establish power-loss guarantees on every filesystem/hardware combination. Power-loss tests and deployed recovery drills remain release gates.
 
 ## Failure matrix
 

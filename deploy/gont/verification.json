@@ -72,7 +72,8 @@
     "retain_audit_data": true
   },
   "remaining": [
-    "Actual connector timeout retest after the native supervision fix",
+    "Connector child-process and cancellation-race acceptance; reproduced timeout fix user-confirmed in docs/connector-regression.md",
+    "Compare local native benchmark in docs/local-verification.md with deployed adapter/connector serialization",
     "Privileged target accounts require separate profile/key/acceptance",
     "No off-host audit replication, interactive PTY, durable jobs or admin-wide audit API",
     "Historical timed_out records with null termination fields do not prove a remote kill"

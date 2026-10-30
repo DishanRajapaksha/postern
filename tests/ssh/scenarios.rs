@@ -60,9 +60,12 @@ pub async fn run(fixture: &Fixture) -> Result<()> {
     ensure!(timed["record"]["outcome"] == "timed_out");
     let audit = tool(&mcp, "alice", "audit", json!({})).await?;
     ensure!(audit["records"].as_array().context("audit")?.len() == 3);
+    crate::ssh_runtime::run(fixture, &mcp, session).await?;
     crate::ssh_deadlines::run(fixture, &mcp, session).await?;
     crate::ssh_security::run(fixture, &mcp, session).await?;
     crate::ssh_disconnect::run(fixture, &mcp).await?;
+    crate::ssh_races::run(fixture, &mcp).await?;
+    crate::ssh_benchmark::run(&mcp, session).await?;
     // The trigger simulates storage rejecting writes while reads still work.
     let database =
         rusqlite::Connection::open(fixture.directory.path().join("audit/audit.sqlite3"))?;
@@ -84,5 +87,6 @@ pub async fn run(fixture: &Fixture) -> Result<()> {
     )
     .await?;
     ensure!(tool(&mcp, "alice", "exec", exec("true")).await?["denied"] == true);
+    database.execute_batch("DROP TRIGGER reject_writes;")?;
     Ok(())
 }
