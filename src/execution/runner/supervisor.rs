@@ -27,7 +27,8 @@ pub(super) fn launch(id: &str, command: &str, seconds: u64) -> String {
          --property=SendSIGKILL=yes --property=ExitType=cgroup \
          --property=RemainAfterExit=yes \"$shell\" -c {}",
         environment(),
-        quote(command)
+        // systemd expands dollars in ExecStart argv; preserve the shell text verbatim.
+        quote(&command.replace('$', "$$"))
     )
 }
 

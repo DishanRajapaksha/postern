@@ -5,6 +5,19 @@ use serde_json::json;
 use std::time::{Duration, Instant};
 
 pub async fn run(fixture: &Fixture, mcp: &Mcp, session: &str) -> Result<()> {
+    let shell = r#"printf '%s\n' '${HOME}' '$$' '100%' '%n'; value=kept; printf '%s\n' "${value}" "$(printf substitution)""#;
+    let result = tool(
+        mcp,
+        "alice",
+        "exec",
+        json!({"session_id":session,"command":shell}),
+    )
+    .await?;
+    ensure!(result["record"]["command"] == shell);
+    ensure!(
+        result["stdout"] == "${HOME}\n$$\n100%\n%n\nkept\nsubstitution\n",
+        "shell text changed: {result}"
+    );
     let root = fixture.directory.path();
     let marker = root.join("deadline-marker");
     let commands = [
